@@ -26,7 +26,7 @@ No test suite yet. Gates are `typecheck` + `build` + launching the built app. Ma
 
 ## Architecture
 
-electron-vite, three targets from `electron.vite.config.ts` into `out/`: `src/main` (Node), `src/preload` (context bridge), `src/renderer` (React 18 + Tailwind, `base: './'`). Aliases `@shared/*` (all targets) and `@renderer/*`. Both tsconfigs are `strict`; the web one adds `noUnusedLocals/Parameters`.
+electron-vite, three targets from `electron.vite.config.ts` into `out/`: `src/main` (Node), `src/preload` (context bridge), `src/renderer` (React 19 + Tailwind 4 via the `@tailwindcss/vite` plugin — theme tokens live in `index.css` `@theme {}`, there is no `tailwind.config.js` or PostCSS; `base: './'`). Aliases `@shared/*` (all targets) and `@renderer/*`. Both tsconfigs are `strict`; the web one adds `noUnusedLocals/Parameters`.
 
 **`window.sshm`** (`src/shared/ipc-types.ts` → `SshmApi`) is the whole renderer↔main contract; `src/preload/index.ts` maps each method to an `ipcRenderer.invoke` channel, `src/main/index.ts` `registerIpcHandlers()` handles them. Adding a capability = type + preload + handler.
 

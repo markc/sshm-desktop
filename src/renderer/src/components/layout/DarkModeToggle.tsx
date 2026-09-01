@@ -29,7 +29,7 @@ export const DarkModeToggle: React.FC<DarkModeToggleProps> = ({ collapsed = fals
         role="switch"
         aria-checked={isDark}
         onClick={toggleTheme}
-        className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors duration-200 focus:outline-none ${
+        className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors duration-200 focus:outline-hidden ${
           isDark ? 'bg-brand' : 'bg-slate-600'
         }`}
         title="Toggle dark mode"

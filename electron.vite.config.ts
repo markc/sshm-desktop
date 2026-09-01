@@ -1,6 +1,7 @@
 import { resolve } from 'path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 
 // Plugin to strip `crossorigin` attributes so Chromium allows file:// script loading in packaged Electron
 function removeCrossoriginPlugin() {
@@ -52,6 +53,6 @@ export default defineConfig({
         '@shared': resolve('src/shared')
       }
     },
-    plugins: [react(), removeCrossoriginPlugin(), cspPlugin()]
+    plugins: [react(), tailwindcss(), removeCrossoriginPlugin(), cspPlugin()]
   }
 })

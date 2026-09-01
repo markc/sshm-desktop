@@ -66,33 +66,33 @@ export const EmbeddedTerminal: React.FC<EmbeddedTerminalProps> = ({ initialHost 
 
   return (
     <div className="h-full flex flex-col bg-[#212529] text-[#f8f9fa] overflow-hidden">
-      <div className="p-3 bg-white dark:bg-[#2b3035] border-b border-[#ced4da] dark:border-[#373b3e] flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div className="p-3 bg-white dark:bg-[#2b3035] border-b border-panel-border-light dark:border-panel-border-dark flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2">
-          <TermIcon className="w-4 h-4 text-[#017cb6]" />
+          <TermIcon className="w-4 h-4 text-brand" />
           <span className="font-bold text-[#212529] dark:text-white">SSH Session</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 bg-[#f8f9fa] dark:bg-[#212529] border border-[#ced4da] dark:border-[#373b3e] px-2 py-1 rounded">
-            <span className="text-[#6c757d]">User:</span>
-            <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="(config)" className="bg-transparent text-[#212529] dark:text-white w-16 focus:outline-none font-mono" />
+          <div className="flex items-center gap-1 bg-[#f8f9fa] dark:bg-[#212529] border border-panel-border-light dark:border-panel-border-dark px-2 py-1 rounded-sm">
+            <span className="text-panel-muted-light">User:</span>
+            <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="(config)" className="bg-transparent text-[#212529] dark:text-white w-16 focus:outline-hidden font-mono" />
           </div>
-          <div className="flex items-center gap-1 bg-[#f8f9fa] dark:bg-[#212529] border border-[#ced4da] dark:border-[#373b3e] px-2 py-1 rounded">
-            <span className="text-[#6c757d]">Host:</span>
-            <input value={hostInput} onChange={(e) => setHostInput(e.target.value)} placeholder="alias or host" className="bg-transparent text-[#212529] dark:text-white w-32 sm:w-44 focus:outline-none font-mono" />
+          <div className="flex items-center gap-1 bg-[#f8f9fa] dark:bg-[#212529] border border-panel-border-light dark:border-panel-border-dark px-2 py-1 rounded-sm">
+            <span className="text-panel-muted-light">Host:</span>
+            <input value={hostInput} onChange={(e) => setHostInput(e.target.value)} placeholder="alias or host" className="bg-transparent text-[#212529] dark:text-white w-32 sm:w-44 focus:outline-hidden font-mono" />
           </div>
-          <div className="flex items-center gap-1 bg-[#f8f9fa] dark:bg-[#212529] border border-[#ced4da] dark:border-[#373b3e] px-2 py-1 rounded">
+          <div className="flex items-center gap-1 bg-[#f8f9fa] dark:bg-[#212529] border border-panel-border-light dark:border-panel-border-dark px-2 py-1 rounded-sm">
             <Key className="w-3.5 h-3.5 text-[#f1ca00]" />
-            <select value={selectedKeyPath} onChange={(e) => setSelectedKeyPath(e.target.value)} className="bg-transparent text-[#212529] dark:text-white focus:outline-none cursor-pointer max-w-[160px]">
+            <select value={selectedKeyPath} onChange={(e) => setSelectedKeyPath(e.target.value)} className="bg-transparent text-[#212529] dark:text-white focus:outline-hidden cursor-pointer max-w-[160px]">
               <option value="" className="bg-white dark:bg-[#2b3035]">Key from config</option>
               {localKeys.filter((k) => k.privateKeyPath).map((k) => (
                 <option key={k.privateKeyPath} value={k.privateKeyPath} className="bg-white dark:bg-[#2b3035]">{k.name}</option>
               ))}
             </select>
           </div>
-          <button onClick={handleLaunch} disabled={!hostInput} className="flex items-center gap-1.5 px-3 py-1 bg-[#017cb6] hover:bg-[#016594] text-white rounded font-medium transition shadow-sm disabled:opacity-50">
+          <button onClick={handleLaunch} disabled={!hostInput} className="flex items-center gap-1.5 px-3 py-1 bg-brand hover:bg-brand-hover text-white rounded-sm font-medium transition shadow-xs disabled:opacity-50">
             <Play className="w-3 h-3 fill-current" /> <span>Launch</span>
           </button>
-          <button onClick={() => xtermInstance.current?.clear()} className="p-1 text-[#6c757d] hover:text-[#212529] dark:hover:text-white rounded" title="Clear" aria-label="Clear">
+          <button onClick={() => xtermInstance.current?.clear()} className="p-1 text-panel-muted-light hover:text-[#212529] dark:hover:text-white rounded-sm" title="Clear" aria-label="Clear">
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
         </div>

@@ -22,12 +22,12 @@ interface HostsPageProps {
 }
 
 const inputClass =
-  'px-2 py-1.5 text-sm rounded border border-[#ced4da] dark:border-[#373b3e] bg-white dark:bg-[#212529] text-[#212529] dark:text-white focus:outline-none focus:border-[#017cb6] w-full'
+  'px-2 py-1.5 text-sm rounded-sm border border-panel-border-light dark:border-panel-border-dark bg-white dark:bg-[#212529] text-[#212529] dark:text-white focus:outline-hidden focus:border-brand w-full'
 const primaryBtn =
-  'px-3 py-1.5 text-xs font-medium rounded border text-white bg-[#017cb6] border-[#017cb6] hover:bg-[#016594] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 whitespace-nowrap'
+  'px-3 py-1.5 text-xs font-medium rounded-sm border text-white bg-brand border-brand hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 whitespace-nowrap'
 const subtleBtn =
-  'px-2.5 py-1 text-xs font-medium rounded border text-[#017cb6] bg-[#017cb6]/10 border-[#017cb6]/30 hover:bg-[#017cb6]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 whitespace-nowrap'
-const iconBtn = 'p-1.5 rounded text-[#6c757d] hover:text-[#017cb6] hover:bg-[#017cb6]/10 disabled:opacity-40'
+  'px-2.5 py-1 text-xs font-medium rounded-sm border text-brand bg-brand/10 border-brand/30 hover:bg-brand/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 whitespace-nowrap'
+const iconBtn = 'p-1.5 rounded-sm text-panel-muted-light hover:text-brand hover:bg-brand/10 disabled:opacity-40'
 
 const tildify = (p: string): string => p.replace(/^\/home\/[^/]+/, '~').replace(/^\/Users\/[^/]+/, '~')
 
@@ -272,18 +272,18 @@ export const HostsPage: React.FC<HostsPageProps> = ({ onOpenTerminal }) => {
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2.5">
             <span>SSH Hosts</span>
-            <span className="text-xs font-normal text-[#6c757d] bg-[#e9ecef] dark:bg-[#2b3035] px-2 py-0.5 rounded-full border border-[#ced4da] dark:border-[#373b3e] whitespace-nowrap">
+            <span className="text-xs font-normal text-panel-muted-light bg-[#e9ecef] dark:bg-[#2b3035] px-2 py-0.5 rounded-full border border-panel-border-light dark:border-panel-border-dark whitespace-nowrap">
               {hosts.length} aliases · {managedCount} managed
             </span>
           </h1>
-          <p className="text-xs text-[#6c757d] mt-1">
+          <p className="text-xs text-panel-muted-light mt-1">
             The literal <code>Host</code> aliases in <code>~/.ssh/config</code> (following <code>Include</code>; patterns, negations and
             aliases starting with <code>-</code> are skipped), with the HostName / User / Port / IdentityFile resolved from Host blocks —{' '}
             conditional <code>Match</code> blocks are not evaluated and only the first IdentityFile is shown. Hosts created here are written to{' '}
             <code>~/.ssh/hosts/&lt;alias&gt;</code>, exactly as <code>sshm create</code> does.
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <button onClick={refresh} className={subtleBtn} disabled={loading} title="Re-read ~/.ssh/config">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
           </button>
@@ -298,14 +298,14 @@ export const HostsPage: React.FC<HostsPageProps> = ({ onOpenTerminal }) => {
 
       {/* Strips */}
       {loadError && (
-        <div role="alert" className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs rounded flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0" /> <span>Couldn't read your SSH config: {loadError}</span>
+        <div role="alert" className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs rounded-sm flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0" /> <span>Couldn't read your SSH config: {loadError}</span>
         </div>
       )}
       {status && !status.includePresent && (
-        <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs rounded flex items-center justify-between gap-3">
+        <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs rounded-sm flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>
               <code>{tildify(status.configPath)}</code> does not include <code>~/.ssh/hosts/*</code> — hosts created here won't be seen
               by ssh until it does.
@@ -319,7 +319,7 @@ export const HostsPage: React.FC<HostsPageProps> = ({ onOpenTerminal }) => {
       {notice && (
         <div
           role="status"
-          className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs rounded flex items-center justify-between gap-3"
+          className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs rounded-sm flex items-center justify-between gap-3"
         >
           <span className="flex items-center gap-2">
             <Check className="w-4 h-4" /> {notice}
@@ -332,7 +332,7 @@ export const HostsPage: React.FC<HostsPageProps> = ({ onOpenTerminal }) => {
 
       {/* Search */}
       <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6c757d]" />
+        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-panel-muted-light" />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -342,11 +342,11 @@ export const HostsPage: React.FC<HostsPageProps> = ({ onOpenTerminal }) => {
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-[#2b3035] rounded-lg border border-[#ced4da] dark:border-[#373b3e] shadow-sm overflow-hidden flex-shrink-0">
+      <div className="bg-white dark:bg-[#2b3035] rounded-lg border border-panel-border-light dark:border-panel-border-dark shadow-xs overflow-hidden shrink-0">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-[#f1f1f1] dark:bg-[#262a2e] border-b border-[#ced4da] dark:border-[#373b3e] text-[#495057] dark:text-[#ced4da] font-semibold">
+              <tr className="bg-panel-subnav-light dark:bg-[#262a2e] border-b border-panel-border-light dark:border-panel-border-dark text-[#495057] dark:text-panel-border-light font-semibold">
                 <th className="py-2.5 px-4">Alias</th>
                 <th className="py-2.5 px-4">HostName</th>
                 <th className="py-2.5 px-4">User</th>
@@ -357,34 +357,34 @@ export const HostsPage: React.FC<HostsPageProps> = ({ onOpenTerminal }) => {
                 <th className="py-2.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#ced4da]/60 dark:divide-[#373b3e]">
+            <tbody className="divide-y divide-panel-border-light/60 dark:divide-panel-border-dark">
               {filtered.map((h) => {
                 const t = tests[h.alias]
                 return (
                   <tr key={`${h.file}:${h.alias}`} className="hover:bg-[#f8f9fa] dark:hover:bg-[#262a2e]">
-                    <td className="py-2 px-4 font-mono font-semibold text-[#017cb6]">{h.alias}</td>
+                    <td className="py-2 px-4 font-mono font-semibold text-brand">{h.alias}</td>
                     <td className="py-2 px-4 font-mono">
-                      {h.hostName || <span className="text-[#adb5bd]" title="No HostName: ssh connects to the alias itself">{h.alias}</span>}
+                      {h.hostName || <span className="text-panel-muted-dark" title="No HostName: ssh connects to the alias itself">{h.alias}</span>}
                     </td>
-                    <td className="py-2 px-4 font-mono">{h.user || <span className="text-[#adb5bd]" title="No User: your login name">—</span>}</td>
-                    <td className="py-2 px-4 font-mono">{h.port ?? <span className="text-[#adb5bd]">22</span>}</td>
+                    <td className="py-2 px-4 font-mono">{h.user || <span className="text-panel-muted-dark" title="No User: your login name">—</span>}</td>
+                    <td className="py-2 px-4 font-mono">{h.port ?? <span className="text-panel-muted-dark">22</span>}</td>
                     <td className="py-2 px-4 font-mono truncate max-w-[220px]" title={h.identityFile}>
-                      {h.identityFile || <span className="text-[#adb5bd]" title="No IdentityFile: ssh's default identities">default</span>}
+                      {h.identityFile || <span className="text-panel-muted-dark" title="No IdentityFile: ssh's default identities">default</span>}
                     </td>
                     <td className="py-2 px-4">
                       {h.managed ? (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase bg-[#017cb6]/10 text-[#017cb6] border border-[#017cb6]/30">
+                        <span className="px-1.5 py-0.5 rounded-sm text-[10px] font-semibold uppercase bg-brand/10 text-brand border border-brand/30">
                           managed
                         </span>
                       ) : (
-                        <span className="text-[#6c757d] truncate block max-w-[200px] font-mono" title={h.file}>
+                        <span className="text-panel-muted-light truncate block max-w-[200px] font-mono" title={h.file}>
                           {tildify(h.file)}
                         </span>
                       )}
                     </td>
                     <td className="py-2 px-4 whitespace-nowrap">
                       {t === 'running' ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#6c757d]" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-panel-muted-light" />
                       ) : t ? (
                         t.ok ? (
                           <span className="text-emerald-600 dark:text-emerald-400 font-mono">ok {t.ms} ms</span>
@@ -394,7 +394,7 @@ export const HostsPage: React.FC<HostsPageProps> = ({ onOpenTerminal }) => {
                           </span>
                         )
                       ) : (
-                        <span className="text-[#adb5bd]">—</span>
+                        <span className="text-panel-muted-dark">—</span>
                       )}
                     </td>
                     <td className="py-2 px-4">
@@ -428,7 +428,7 @@ export const HostsPage: React.FC<HostsPageProps> = ({ onOpenTerminal }) => {
               })}
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-8 px-4 text-center text-[#6c757d]">
+                  <td colSpan={8} className="py-8 px-4 text-center text-panel-muted-light">
                     {hosts.length === 0 ? 'No Host aliases found in ~/.ssh/config.' : 'No hosts match the filter.'}
                   </td>
                 </tr>
@@ -444,17 +444,17 @@ export const HostsPage: React.FC<HostsPageProps> = ({ onOpenTerminal }) => {
           <form
             onSubmit={submit}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md bg-white dark:bg-[#2b3035] rounded-lg border border-[#ced4da] dark:border-[#373b3e] shadow-2xl overflow-hidden"
+            className="w-full max-w-md bg-white dark:bg-[#2b3035] rounded-lg border border-panel-border-light dark:border-panel-border-dark shadow-2xl overflow-hidden"
           >
-            <div className="px-4 py-3 bg-[#f1f1f1] dark:bg-[#262a2e] border-b border-[#ced4da] dark:border-[#373b3e] flex items-center justify-between">
+            <div className="px-4 py-3 bg-panel-subnav-light dark:bg-[#262a2e] border-b border-panel-border-light dark:border-panel-border-dark flex items-center justify-between">
               <h3 className="font-semibold text-sm">{form.editing ? `Edit ~/.ssh/hosts/${form.alias}` : 'New host'}</h3>
-              <button type="button" onClick={closeForm} disabled={saving} className="text-[#6c757d] hover:text-rose-500 disabled:opacity-40" aria-label="Close">
+              <button type="button" onClick={closeForm} disabled={saving} className="text-panel-muted-light hover:text-rose-500 disabled:opacity-40" aria-label="Close">
                 <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-4 space-y-3 text-sm">
               <label className="block">
-                <span className="text-xs text-[#6c757d]">Alias</span>
+                <span className="text-xs text-panel-muted-light">Alias</span>
                 <input
                   value={form.alias}
                   onChange={(e) => setForm({ ...form, alias: e.target.value })}
@@ -466,7 +466,7 @@ export const HostsPage: React.FC<HostsPageProps> = ({ onOpenTerminal }) => {
                 />
               </label>
               <label className="block">
-                <span className="text-xs text-[#6c757d]">Hostname or IP</span>
+                <span className="text-xs text-panel-muted-light">Hostname or IP</span>
                 <input
                   value={form.hostName}
                   onChange={(e) => setForm({ ...form, hostName: e.target.value })}
@@ -479,16 +479,16 @@ export const HostsPage: React.FC<HostsPageProps> = ({ onOpenTerminal }) => {
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
-                  <span className="text-xs text-[#6c757d]">Port (blank = 22)</span>
+                  <span className="text-xs text-panel-muted-light">Port (blank = 22)</span>
                   <input value={form.port} onChange={(e) => setForm({ ...form, port: e.target.value })} disabled={saving} className={`${inputClass} font-mono`} inputMode="numeric" />
                 </label>
                 <label className="block">
-                  <span className="text-xs text-[#6c757d]">User (blank = root)</span>
+                  <span className="text-xs text-panel-muted-light">User (blank = root)</span>
                   <input value={form.user} onChange={(e) => setForm({ ...form, user: e.target.value })} disabled={saving} className={`${inputClass} font-mono`} />
                 </label>
               </div>
               <label className="block">
-                <span className="text-xs text-[#6c757d]">Identity file (blank = ~/.ssh/keys/default)</span>
+                <span className="text-xs text-panel-muted-light">Identity file (blank = ~/.ssh/keys/default)</span>
                 <input
                   value={form.identityFile}
                   onChange={(e) => setForm({ ...form, identityFile: e.target.value })}
@@ -506,17 +506,17 @@ export const HostsPage: React.FC<HostsPageProps> = ({ onOpenTerminal }) => {
               </label>
               {formError && (
                 <div className="text-xs text-rose-600 dark:text-rose-400 flex items-start gap-1.5">
-                  <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> <span>{formError}</span>
+                  <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> <span>{formError}</span>
                 </div>
               )}
               {formDerived.error && !formError && (
                 <div className="text-xs text-amber-600 dark:text-amber-400">{formDerived.error}</div>
               )}
-              <pre className="text-[11px] font-mono bg-[#f8f9fa] dark:bg-[#212529] border border-[#ced4da] dark:border-[#373b3e] rounded p-2 text-[#6c757d] overflow-x-auto">
+              <pre className="text-[11px] font-mono bg-[#f8f9fa] dark:bg-[#212529] border border-panel-border-light dark:border-panel-border-dark rounded-sm p-2 text-panel-muted-light overflow-x-auto">
                 {preview(formDerived.input)}
               </pre>
             </div>
-            <div className="px-4 py-3 bg-[#f1f1f1] dark:bg-[#262a2e] border-t border-[#ced4da] dark:border-[#373b3e] flex justify-end gap-2">
+            <div className="px-4 py-3 bg-panel-subnav-light dark:bg-[#262a2e] border-t border-panel-border-light dark:border-panel-border-dark flex justify-end gap-2">
               {form.editing && (
                 <button type="button" onClick={() => openFile(`~/.ssh/hosts/${form.alias}`)} className={subtleBtn} disabled={saving}>
                   <FolderOpen className="w-3.5 h-3.5" /> Open file

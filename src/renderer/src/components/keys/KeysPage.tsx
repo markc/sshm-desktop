@@ -3,12 +3,12 @@ import { AlertTriangle, Check, Copy, KeyRound, Loader2, Plus, RefreshCw, Trash2,
 import { LocalSshKey } from '@shared/ipc-types'
 
 const inputClass =
-  'px-2 py-1.5 text-sm rounded border border-[#ced4da] dark:border-[#373b3e] bg-white dark:bg-[#212529] text-[#212529] dark:text-white focus:outline-none focus:border-[#017cb6] w-full'
+  'px-2 py-1.5 text-sm rounded-sm border border-panel-border-light dark:border-panel-border-dark bg-white dark:bg-[#212529] text-[#212529] dark:text-white focus:outline-hidden focus:border-brand w-full'
 const primaryBtn =
-  'px-3 py-1.5 text-xs font-medium rounded border text-white bg-[#017cb6] border-[#017cb6] hover:bg-[#016594] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5'
+  'px-3 py-1.5 text-xs font-medium rounded-sm border text-white bg-brand border-brand hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5'
 const subtleBtn =
-  'px-2.5 py-1 text-xs font-medium rounded border text-[#017cb6] bg-[#017cb6]/10 border-[#017cb6]/30 hover:bg-[#017cb6]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5'
-const iconBtn = 'p-1.5 rounded text-[#6c757d] hover:text-[#017cb6] hover:bg-[#017cb6]/10 disabled:opacity-40'
+  'px-2.5 py-1 text-xs font-medium rounded-sm border text-brand bg-brand/10 border-brand/30 hover:bg-brand/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5'
+const iconBtn = 'p-1.5 rounded-sm text-panel-muted-light hover:text-brand hover:bg-brand/10 disabled:opacity-40'
 
 export const KeysPage: React.FC = () => {
   const [keys, setKeys] = useState<LocalSshKey[]>([])
@@ -84,11 +84,11 @@ export const KeysPage: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2.5">
             <span>SSH Keys</span>
-            <span className="text-xs font-normal text-[#6c757d] bg-[#e9ecef] dark:bg-[#2b3035] px-2 py-0.5 rounded-full border border-[#ced4da] dark:border-[#373b3e]">
+            <span className="text-xs font-normal text-panel-muted-light bg-[#e9ecef] dark:bg-[#2b3035] px-2 py-0.5 rounded-full border border-panel-border-light dark:border-panel-border-dark">
               {keys.length}
             </span>
           </h1>
-          <p className="text-xs text-[#6c757d] mt-1">
+          <p className="text-xs text-panel-muted-light mt-1">
             Keys under <code>~/.ssh/keys/</code> are managed here (created with <code>ssh-keygen -o -a 100 -t ed25519</code>, as{' '}
             <code>sshm kc</code> does); <code>~/.ssh/id_*</code> keys are listed read-only.
           </p>
@@ -104,17 +104,17 @@ export const KeysPage: React.FC = () => {
       </div>
 
       {notice && (
-        <div role="status" className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs rounded flex items-center justify-between gap-3">
+        <div role="status" className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs rounded-sm flex items-center justify-between gap-3">
           <span className="flex items-center gap-2"><Check className="w-4 h-4" /> {notice}</span>
           <button onClick={() => setNotice(null)} className="hover:underline">Dismiss</button>
         </div>
       )}
 
-      <div className="bg-white dark:bg-[#2b3035] rounded-lg border border-[#ced4da] dark:border-[#373b3e] shadow-sm overflow-hidden flex-shrink-0">
+      <div className="bg-white dark:bg-[#2b3035] rounded-lg border border-panel-border-light dark:border-panel-border-dark shadow-xs overflow-hidden shrink-0">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-[#f1f1f1] dark:bg-[#262a2e] border-b border-[#ced4da] dark:border-[#373b3e] text-[#495057] dark:text-[#ced4da] font-semibold">
+              <tr className="bg-panel-subnav-light dark:bg-[#262a2e] border-b border-panel-border-light dark:border-panel-border-dark text-[#495057] dark:text-panel-border-light font-semibold">
                 <th className="py-2.5 px-4">Name</th>
                 <th className="py-2.5 px-4">Type</th>
                 <th className="py-2.5 px-4">Fingerprint</th>
@@ -123,18 +123,18 @@ export const KeysPage: React.FC = () => {
                 <th className="py-2.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#ced4da]/60 dark:divide-[#373b3e]">
+            <tbody className="divide-y divide-panel-border-light/60 dark:divide-panel-border-dark">
               {keys.map((k) => (
                 <tr key={k.publicKeyPath || k.name} className="hover:bg-[#f8f9fa] dark:hover:bg-[#262a2e]">
-                  <td className="py-2 px-4 font-mono font-semibold text-[#017cb6] flex items-center gap-2">
+                  <td className="py-2 px-4 font-mono font-semibold text-brand flex items-center gap-2">
                     <KeyRound className="w-3.5 h-3.5 text-[#f1ca00]" /> {k.name}
                     {k.managed && (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase bg-[#017cb6]/10 text-[#017cb6] border border-[#017cb6]/30">managed</span>
+                      <span className="px-1.5 py-0.5 rounded-sm text-[10px] font-semibold uppercase bg-brand/10 text-brand border border-brand/30">managed</span>
                     )}
                   </td>
                   <td className="py-2 px-4 font-mono">{k.type ? `${k.type}${k.bits ? ` ${k.bits}` : ''}` : '—'}</td>
                   <td className="py-2 px-4 font-mono truncate max-w-[260px]" title={k.fingerprint}>{k.fingerprint || '—'}</td>
-                  <td className="py-2 px-4 truncate max-w-[200px]" title={k.comment}>{k.comment || <span className="text-[#adb5bd]">—</span>}</td>
+                  <td className="py-2 px-4 truncate max-w-[200px]" title={k.comment}>{k.comment || <span className="text-panel-muted-dark">—</span>}</td>
                   <td className="py-2 px-4 font-mono">
                     {k.privateKeyPath ? k.privateKeyPath.replace(/^\/home\/[^/]+/, '~') : <span className="text-amber-600">public only</span>}
                   </td>
@@ -155,7 +155,7 @@ export const KeysPage: React.FC = () => {
                 </tr>
               ))}
               {!loading && keys.length === 0 && (
-                <tr><td colSpan={6} className="py-8 px-4 text-center text-[#6c757d]">No keys found in ~/.ssh/keys/ or ~/.ssh/id_*.</td></tr>
+                <tr><td colSpan={6} className="py-8 px-4 text-center text-panel-muted-light">No keys found in ~/.ssh/keys/ or ~/.ssh/id_*.</td></tr>
               )}
             </tbody>
           </table>
@@ -164,33 +164,33 @@ export const KeysPage: React.FC = () => {
 
       {form && (
         <div className="fixed inset-0 z-40 bg-black/50 flex items-center justify-center p-4" onClick={closeForm}>
-          <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-white dark:bg-[#2b3035] rounded-lg border border-[#ced4da] dark:border-[#373b3e] shadow-2xl overflow-hidden">
-            <div className="px-4 py-3 bg-[#f1f1f1] dark:bg-[#262a2e] border-b border-[#ced4da] dark:border-[#373b3e] flex items-center justify-between">
+          <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-white dark:bg-[#2b3035] rounded-lg border border-panel-border-light dark:border-panel-border-dark shadow-2xl overflow-hidden">
+            <div className="px-4 py-3 bg-panel-subnav-light dark:bg-[#262a2e] border-b border-panel-border-light dark:border-panel-border-dark flex items-center justify-between">
               <h3 className="font-semibold text-sm">New key in ~/.ssh/keys/</h3>
-              <button type="button" onClick={closeForm} disabled={creating} className="text-[#6c757d] hover:text-rose-500 disabled:opacity-40" aria-label="Close"><X className="w-4 h-4" /></button>
+              <button type="button" onClick={closeForm} disabled={creating} className="text-panel-muted-light hover:text-rose-500 disabled:opacity-40" aria-label="Close"><X className="w-4 h-4" /></button>
             </div>
             <div className="p-4 space-y-3 text-sm">
               <label className="block">
-                <span className="text-xs text-[#6c757d]">Name (file name under ~/.ssh/keys/)</span>
+                <span className="text-xs text-panel-muted-light">Name (file name under ~/.ssh/keys/)</span>
                 <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="wan" className={`${inputClass} font-mono`} autoFocus required />
               </label>
               <label className="block">
-                <span className="text-xs text-[#6c757d]">Comment</span>
+                <span className="text-xs text-panel-muted-light">Comment</span>
                 <input value={form.comment} onChange={(e) => setForm({ ...form, comment: e.target.value })} placeholder="markc@cachyos" className={inputClass} />
               </label>
               <label className="block">
-                <span className="text-xs text-[#6c757d]">Type</span>
+                <span className="text-xs text-panel-muted-light">Type</span>
                 <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as 'ed25519' | 'rsa' })} className={inputClass}>
                   <option value="ed25519">ed25519 (recommended)</option>
                   <option value="rsa">rsa 4096</option>
                 </select>
               </label>
-              <p className="text-[11px] text-[#6c757d]">Generated without a passphrase, as <code>sshm kc</code> does by default. Add one later with <code>ssh-keygen -p</code> if you want.</p>
+              <p className="text-[11px] text-panel-muted-light">Generated without a passphrase, as <code>sshm kc</code> does by default. Add one later with <code>ssh-keygen -p</code> if you want.</p>
               {formError && (
-                <div className="text-xs text-rose-600 dark:text-rose-400 flex items-start gap-1.5"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> <span>{formError}</span></div>
+                <div className="text-xs text-rose-600 dark:text-rose-400 flex items-start gap-1.5"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> <span>{formError}</span></div>
               )}
             </div>
-            <div className="px-4 py-3 bg-[#f1f1f1] dark:bg-[#262a2e] border-t border-[#ced4da] dark:border-[#373b3e] flex justify-end gap-2">
+            <div className="px-4 py-3 bg-panel-subnav-light dark:bg-[#262a2e] border-t border-panel-border-light dark:border-panel-border-dark flex justify-end gap-2">
               <button type="button" onClick={closeForm} className={subtleBtn} disabled={creating}>Cancel</button>
               <button type="submit" className={primaryBtn} disabled={creating}>{creating && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Generate</button>
             </div>
