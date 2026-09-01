@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --sidebar-bg: #343a40;
+    --sidebar-text-color: #f8f9fa;
+    --primary: #017cb6;
+    --primary-hover: #016594;
+    --gold: #f1ca00;
+    --border-color: #ced4da;
+    --bg-page: #f8f9fa;
+    --bg-surface: #ffffff;
+    --bg-subnav: #f1f1f1;
+    --text-main: #212529;
+    --text-muted: #6c757d;
+  }
+
+  .dark {
+    --border-color: #373b3e;
+    --bg-page: #212529;
+    --bg-surface: #2b3035;
+    --bg-subnav: #2b3035;
+    --text-main: #f8f9fa;
+    --text-muted: #adb5bd;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: var(--bg-page);
+    color: var(--text-main);
+    overflow: hidden;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #6c757d55;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6c757d88;
+}
+
+/* Frameless Window Draggable Region */
+.titlebar-drag-region {
+  -webkit-app-region: drag;
+}
+.titlebar-no-drag {
+  -webkit-app-region: no-drag;
+}

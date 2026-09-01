@@ -1,0 +1,91 @@
+{
+  "name": "sshm-desktop",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Desktop manager for your local SSH hosts and keys — ~/.ssh/config, ~/.ssh/hosts/*, ~/.ssh/keys/*",
+  "main": "./out/main/index.js",
+  "author": "Mark Constable (markc)",
+  "license": "MIT",
+  "homepage": "https://github.com/markc/sshm-desktop",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/markc/sshm-desktop.git"
+  },
+  "scripts": {
+    "format": "prettier --write .",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "start": "electron-vite preview",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "pack:linux": "npx @electron/packager . sshm-desktop --platform=linux --arch=x64 --out=release --overwrite --icon=resources/icon.png --extra-resource=resources --ignore=src",
+    "pack:mac": "npx @electron/packager . sshm-desktop --platform=darwin --arch=universal --out=release --overwrite --icon=resources/icon.png --extra-resource=resources --ignore=src",
+    "pack:win": "npx @electron/packager . sshm-desktop --platform=win32 --arch=x64 --out=release --overwrite --icon=resources/icon.png --extra-resource=resources --ignore=src",
+    "build:linux": "npm run build && electron-builder --linux",
+    "build:mac": "npm run build && electron-builder --mac",
+    "build:win": "npm run build && electron-builder --win"
+  },
+  "build": {
+    "appId": "net.renta.sshm-desktop",
+    "productName": "SSHM Desktop",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*"
+    ],
+    "linux": {
+      "icon": "resources/icon.png",
+      "target": [
+        "dir",
+        "AppImage"
+      ],
+      "category": "Network"
+    },
+    "mac": {
+      "icon": "resources/icon.png",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "target": [
+        "dir",
+        "portable"
+      ]
+    }
+  },
+  "dependencies": {
+    "@electron-toolkit/preload": "^3.0.1",
+    "@electron-toolkit/utils": "^3.0.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.460.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^2.5.4",
+    "xterm": "^5.3.0",
+    "xterm-addon-fit": "^0.8.0",
+    "xterm-addon-web-links": "^0.9.0"
+  },
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "@types/node": "^22.9.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^2.3.0",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.14",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  },
+  "allowScripts": {
+    "electron@33.4.11": true,
+    "esbuild@0.21.5": true
+  }
+}
