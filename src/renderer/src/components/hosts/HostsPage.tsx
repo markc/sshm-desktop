@@ -172,7 +172,7 @@ export const HostsPage: React.FC<HostsPageProps> = ({ onOpenTerminal }) => {
           // Someone else wrote the file: reload the form from the new version so the user
           // sees (and edits) what is there now — never just re-point the stale fields at it.
           await refresh()
-          const fresh = (await window.sshm.listHosts()).find((h) => h.alias === form.alias)
+          const fresh = (await window.sshm.listHosts()).find((h) => h.alias === form.alias && h.managed && h.contentHash)
           if (fresh) {
             setForm({
               alias: fresh.alias,

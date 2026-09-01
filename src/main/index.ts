@@ -51,8 +51,8 @@ function createWindow(): void {
     }
   })
 
-  mainWindow.webContents.on('console-message', (_, level, message, line, sourceId) => {
-    console.log(`[Renderer] [${level}] ${message} (${sourceId}:${line})`)
+  mainWindow.webContents.on('console-message', (details) => {
+    console.log(`[Renderer] [${details.level}] ${details.message} (${details.sourceId}:${details.lineNumber})`)
   })
   mainWindow.once('ready-to-show', () => {
     console.log('[Main] Window ready to show')

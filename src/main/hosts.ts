@@ -95,12 +95,14 @@ function writeExclusive(path: string, mode: number, content: string): { fd: numb
     fsyncSync(fd)
     return { fd, ino: st.ino }
   } catch (err) {
-    closeSync(fd)
+    let ino: bigint | number | undefined
     try {
-      unlinkSync(path)
+      ino = fstatSync(fd).ino
     } catch {
-      /* ignore */
+      ino = undefined
     }
+    closeSync(fd)
+    if (ino !== undefined) unlinkIfOurs(path, ino)
     throw err
   }
 }
@@ -154,7 +156,20 @@ function unlinkIfOurs(p: string, ino: bigint | number): void {
  * report it and leave that file alone — we can't prove it isn't someone's newer save.
  * Filesystems without hard links fall back to exclusive creation at the destination.
  */
-function installManaged(file: string, content: string, mode: number, exclusive: boolean): void {
+class ChangedError extends Error {}
+
+/**
+ * Atomically install `content` at `file`. `exclusive` (create) links a temp into
+ * place — EEXIST if anything appeared there since we checked — while replace renames
+ * over the old entry. Neither ever opens the destination path, so hard links
+ * elsewhere keep their own bytes; only the directory entry changes. For a replace,
+ * `expectedHash` is re-checked against the file immediately before the rename, which
+ * shrinks (but, without flock, cannot close) the window in which another same-user
+ * writer's save could be replaced. Afterwards the destination must be the inode we
+ * wrote; if something else got there first we report it and leave that file alone.
+ * Filesystems without hard links fall back to exclusive creation at the destination.
+ */
+function installManaged(file: string, content: string, mode: number, exclusive: boolean, expectedHash?: string): void {
   assertNoSymlinks(file)
   const dir = dirname(file)
   const tmp = tempName(dir)
@@ -172,18 +187,28 @@ function installManaged(file: string, content: string, mode: number, exclusive: 
         installedIno = direct.ino
       }
     } else {
+      if (expectedHash !== undefined) {
+        // Last-moment compare-and-swap: the file must still be the version we checked.
+        let now: string
+        try {
+          now = isRegularFileNoFollow(file) ? contentHash(readFileSync(file)) : ''
+        } catch {
+          now = ''
+        }
+        if (now !== expectedHash) throw new ChangedError(`${file} changed on disk just before it was written; nothing replaced — check it and retry.`)
+      }
       renameSync(tmp, file) // tmp no longer exists after this
     }
   } finally {
     closeSync(fd)
     unlinkIfOurs(tmp, ino)
   }
-  verifyInstalled(file, installedIno)
+  verifyInstalled(file, installedIno, exclusive)
   fsyncDir(dir)
 }
 
 /** The directory entry we just installed must point at the inode we wrote. Never deletes on mismatch. */
-function verifyInstalled(file: string, ino: bigint | number): void {
+function verifyInstalled(file: string, ino: bigint | number, exclusive: boolean): void {
   let st
   try {
     st = lstatSync(file)
@@ -191,11 +216,16 @@ function verifyInstalled(file: string, ino: bigint | number): void {
     throw new UnsafePathError(`${file} vanished during install — nothing written.`)
   }
   if (!st.isFile() || st.ino !== ino) {
-    throw new UnsafePathError(`${file} was replaced by another writer during install; left untouched — check it and retry.`)
+    throw new UnsafePathError(
+      exclusive
+        ? `${file} was created by another writer during install; left untouched — check it and retry.`
+        : `${file} was replaced by another writer right after it was written; their version is left in place — check it and retry.`
+    )
   }
 }
 
-const replaceAtomic = (file: string, content: string, mode: number): void => installManaged(file, content, mode, false)
+const replaceAtomic = (file: string, content: string, mode: number, expectedHash?: string): void =>
+  installManaged(file, content, mode, false, expectedHash)
 
 function isRegularFileNoFollow(p: string): boolean {
   try {
@@ -242,10 +272,13 @@ export function ensureInclude(): OpResult & { changed?: boolean } {
     ensureDir(hostsDir())
     const configPath = sshConfigPath()
     if (configIncludesHostsDir()) return { success: true, changed: false, file: configPath }
-    const text = isRegularFileNoFollow(configPath) ? readFileSync(configPath, 'utf8') : ''
-    replaceAtomic(configPath, `Include ~/.ssh/hosts/*\n\n${text}`, 0o600)
+    const raw = isRegularFileNoFollow(configPath) ? readFileSync(configPath) : Buffer.alloc(0)
+    // The rewrite is based on exactly these bytes; if the config moves on before the
+    // rename, nothing is replaced (a concurrent edit to ~/.ssh/config must never be lost).
+    replaceAtomic(configPath, `Include ~/.ssh/hosts/*\n\n${raw.toString('utf8')}`, 0o600, contentHash(raw))
     return { success: true, changed: true, file: configPath }
   } catch (err) {
+    if (err instanceof ChangedError) return { success: false, code: 'changed', error: err.message }
     return fail(err)
   }
 }
@@ -294,7 +327,7 @@ export function isCanonicalHostFile(text: string, alias?: string): boolean {
   return alias === undefined || m[1] === alias
 }
 
-export const contentHash = (text: string): string => createHash('sha256').update(text).digest('hex')
+export const contentHash = (data: string | Buffer): string => createHash('sha256').update(data).digest('hex')
 
 /** Name of an existing file in ~/.ssh/hosts that equals `alias` ignoring case (case-insensitive FS safety). */
 function existingCaseVariant(alias: string): string | null {
@@ -372,9 +405,20 @@ export function saveHost(input: SshHostInput): OpResult {
       }
     }
 
-    installManaged(file, renderHostFile(input), 0o600, mode === 'create')
+    // For an update, the version we validated against is the one that must still be there at rename time.
+    const basis = mode === 'update' ? (input.force ?? input.expectedHash) : undefined
+    installManaged(file, renderHostFile(input), 0o600, mode === 'create', basis)
     return { success: true, file }
   } catch (err) {
+    if (err instanceof ChangedError) {
+      let hash: string | undefined
+      try {
+        hash = contentHash(readFileSync(join(hostsDir(), alias)))
+      } catch {
+        hash = undefined
+      }
+      return { success: false, code: 'changed', contentHash: hash, error: err.message, file: join(hostsDir(), alias) }
+    }
     return fail(err)
   }
 }
@@ -537,10 +581,12 @@ export async function createKey(input: KeyCreateInput): Promise<OpResult> {
       return direct.ino
     }
   }
+  let conflictPath = file
   try {
     chmodSync(tmp, 0o600)
     const privIno = installOne(tmp, file)
     try {
+      conflictPath = pub
       installOne(tmpPub, pub)
     } catch (err) {
       unlinkIfOurs(file, privIno)
@@ -548,7 +594,7 @@ export async function createKey(input: KeyCreateInput): Promise<OpResult> {
     }
   } catch (err: any) {
     cleanupTemps()
-    if (err?.code === 'EEXIST') return { success: false, error: `${file} appeared while generating — not overwritten.` }
+    if (err?.code === 'EEXIST') return { success: false, error: `${conflictPath} appeared while generating — not overwritten.` }
     return fail(err)
   }
   cleanupTemps()

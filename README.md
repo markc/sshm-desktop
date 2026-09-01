@@ -54,7 +54,11 @@ npx electron .       # run the production bundle
 npm run pack:linux   # release/sshm-desktop-linux-x64/ (also pack:mac, pack:win)
 ```
 
-Requires Node 20+ and an `ssh` / `ssh-keygen` on `PATH`.
+Requires Node 20+ and an `ssh` / `ssh-keygen` on `PATH`. Built on Electron 44.
+
+Notes: `~/.ssh` itself must not be a symlink (writes are refused, for safety). On
+macOS, Electron 42+ needs a code-signed build for desktop notifications; an
+unsigned build runs fine but the "opened in Terminal" notification won't show.
 
 ## License
 

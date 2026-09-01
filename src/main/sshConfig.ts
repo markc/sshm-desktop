@@ -13,9 +13,10 @@ import { SshHost } from '../shared/ipc-types'
  *
  * Semantics kept from ssh_config(5): blocks are matched in file order with
  * `*` / `?` globs and `!` negation; the FIRST value obtained for an option wins;
- * `Include` is textual (included lines belong to the enclosing block); `Match`
- * blocks are not evaluated and are skipped entirely; `%h` / `%%` in HostName
- * are expanded, any other `%` token makes that alias's HostName unknown.
+ * `Include` is textual (included lines belong to the enclosing block); `Match all`
+ * is unconditional and parsed like top level, any other `Match` block is not
+ * evaluated and is skipped entirely; `%h` / `%%` in HostName are expanded, any
+ * other `%` token makes that alias's HostName unknown.
  * Known limitation: only the last path segment of an Include may contain a glob.
  */
 
