@@ -38,18 +38,26 @@ interface Form {
   user: string
   identityFile: string
   editing: boolean
-  /** Set when the server refused an update because the file has extra directives. */
-  needsForce: boolean
+  /** contentHash from a "non-canonical" refusal: the exact file the user agreed to overwrite. */
+  forceHash: string | null
 }
-const emptyForm: Form = { alias: '', hostName: '', port: '22', user: 'root', identityFile: '~/.ssh/keys/default', editing: false, needsForce: false }
+const emptyForm: Form = { alias: '', hostName: '', port: '22', user: 'root', identityFile: '~/.ssh/keys/default', editing: false, forceHash: null }
 
-/** One place turns the form into the payload; the preview, validation and file all derive from it. */
+/**
+ * One place turns the form into the payload; preview, client-side validation and the
+ * file all derive from it. The payload is always returned so the preview keeps
+ * describing what would be written even while a field is invalid.
+ */
 function toInput(form: Form): { input: SshHostInput; error: string | null } {
   const portText = form.port.trim()
   let port: number | undefined
+  let error: string | null = null
   if (portText !== '') {
-    if (!/^\d+$/.test(portText)) return { input: { alias: '', hostName: '' }, error: 'Port must be a whole number.' }
-    port = Number(portText)
+    if (!/^\d+$/.test(portText)) error = 'Port must be a whole number.'
+    else {
+      port = Number(portText)
+      if (port < 1 || port > 65535) error = 'Port must be between 1 and 65535.'
+    }
   }
   return {
     input: {
@@ -59,9 +67,9 @@ function toInput(form: Form): { input: SshHostInput; error: string | null } {
       user: form.user.trim() || undefined,
       identityFile: form.identityFile.trim() || undefined,
       mode: form.editing ? 'update' : 'create',
-      force: form.needsForce
+      force: form.forceHash ?? undefined
     },
-    error: null
+    error
   }
 }
 
@@ -123,7 +131,7 @@ export const HostsPage: React.FC<HostsPageProps> = ({ onOpenTerminal }) => {
       user: h.user || 'root',
       identityFile: h.identityFile || '~/.ssh/keys/default',
       editing: true,
-      needsForce: false
+      forceHash: null
     })
   }
   const closeForm = (): void => {
@@ -144,8 +152,9 @@ export const HostsPage: React.FC<HostsPageProps> = ({ onOpenTerminal }) => {
       const r = await window.sshm.saveHost(input)
       if (!r.success) {
         setFormError(r.error || 'Save failed.')
-        // A refused update because of extra directives: offer Force on the next submit.
-        if (form.editing && /beyond the standard five lines/.test(r.error || '')) setForm({ ...form, needsForce: true })
+        // Refused because the file has extra directives (or changed since): the next submit
+        // may force-overwrite exactly the content the server just hashed — nothing else.
+        setForm({ ...form, forceHash: r.code === 'non-canonical' && r.contentHash ? r.contentHash : null })
         return
       }
       setNotice(`${form.editing ? 'Updated' : 'Created'} ${tildify(r.file || '')}`)
@@ -478,8 +487,8 @@ export const HostsPage: React.FC<HostsPageProps> = ({ onOpenTerminal }) => {
               <button type="button" onClick={closeForm} className={subtleBtn} disabled={saving}>
                 Cancel
               </button>
-              <button type="submit" className={form.needsForce ? `${primaryBtn} bg-rose-600 border-rose-600 hover:bg-rose-700` : primaryBtn} disabled={saving || !!formDerived.error}>
-                {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />} {form.needsForce ? 'Force overwrite' : form.editing ? 'Save' : 'Create'}
+              <button type="submit" className={form.forceHash ? `${primaryBtn} bg-rose-600 border-rose-600 hover:bg-rose-700` : primaryBtn} disabled={saving || !!formDerived.error}>
+                {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />} {form.forceHash ? 'Force overwrite' : form.editing ? 'Save' : 'Create'}
               </button>
             </div>
           </form>

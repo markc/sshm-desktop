@@ -1,10 +1,14 @@
 import { execFile } from 'child_process'
+import { createHash, randomBytes } from 'crypto'
 import {
+  chmodSync,
   closeSync,
   constants as fsConstants,
   existsSync,
   fchmodSync,
   fstatSync,
+  fsyncSync,
+  linkSync,
   lstatSync,
   mkdirSync,
   openSync,
@@ -40,7 +44,7 @@ const FILE_ALIAS_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/ // a filename too, so no `:
 const USER_RE = /^[A-Za-z0-9._][A-Za-z0-9._-]{0,63}$/
 const CONTROL_RE = /[\x00-\x1f\x7f]/
 const KEY_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/
-const WINDOWS_RESERVED_RE = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i
+const WINDOWS_RESERVED_RE = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$|\.$/i // reserved names, or a trailing dot
 const TEST_TIMEOUT_S = 5
 
 export const keysDir = (): string => join(sshDir(), 'keys')
@@ -69,30 +73,66 @@ function assertNoSymlinks(p: string): void {
 function ensureDir(dir: string): void {
   assertNoSymlinks(dir)
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 })
+  else if (process.platform !== 'win32' && (statSync(dir).mode & 0o777) !== 0o700) chmodSync(dir, 0o700)
 }
 
-/** Create-or-replace a regular file without following symlinks; mode is enforced on every write. */
-function writeManaged(file: string, content: string, mode: number): void {
-  assertNoSymlinks(file)
+/**
+ * Write `content` to a brand-new, exclusively created, randomly named temp file in
+ * the target's directory and return its path. Exclusive creation means no existing
+ * inode — symlink, hard link or otherwise — can ever be truncated or written through.
+ */
+function writeTemp(dir: string, mode: number, content: string): string {
   const O = fsConstants
-  const flags = O.O_WRONLY | O.O_CREAT | O.O_TRUNC | (O.O_NOFOLLOW ?? 0)
-  const fd = openSync(file, flags, mode)
+  const tmp = join(dir, `.sshm-${randomBytes(8).toString('hex')}.tmp`)
+  const fd = openSync(tmp, O.O_WRONLY | O.O_CREAT | O.O_EXCL | (O.O_NOFOLLOW ?? 0), mode)
   try {
-    if (!fstatSync(fd).isFile()) throw new UnsafePathError(`${file} is not a regular file.`)
+    const st = fstatSync(fd)
+    if (!st.isFile() || st.nlink !== 1) throw new UnsafePathError(`${tmp} is not a fresh regular file.`)
     fchmodSync(fd, mode)
-    writeSync(fd, content)
-  } finally {
+    const buf = Buffer.from(content, 'utf8')
+    let off = 0
+    while (off < buf.length) off += writeSync(fd, buf, off, buf.length - off)
+    fsyncSync(fd)
+  } catch (err) {
     closeSync(fd)
+    try {
+      unlinkSync(tmp)
+    } catch {
+      /* ignore */
+    }
+    throw err
+  }
+  closeSync(fd)
+  return tmp
+}
+
+function fsyncDir(dir: string): void {
+  if (process.platform === 'win32') return
+  try {
+    const fd = openSync(dir, 'r')
+    try {
+      fsyncSync(fd)
+    } finally {
+      closeSync(fd)
+    }
+  } catch {
+    /* best effort */
   }
 }
 
-/** Replace `file` atomically (temp file + rename in the same directory). */
-function replaceAtomic(file: string, content: string, mode: number): void {
+/**
+ * Atomically install `content` at `file`. `exclusive` (create) links the temp into
+ * place — fails with EEXIST if anything appeared there since we checked — while
+ * replace renames over the old entry. Neither ever opens the destination path, so
+ * hard links elsewhere keep their own bytes; only the directory entry changes.
+ */
+function installManaged(file: string, content: string, mode: number, exclusive: boolean): void {
   assertNoSymlinks(file)
-  const tmp = join(dirname(file), `.${basename(file)}.${process.pid}.tmp`)
-  writeManaged(tmp, content, mode)
+  const dir = dirname(file)
+  const tmp = writeTemp(dir, mode, content)
   try {
-    renameSync(tmp, file)
+    if (exclusive) linkSync(tmp, file)
+    else renameSync(tmp, file)
   } catch (err) {
     try {
       unlinkSync(tmp)
@@ -101,7 +141,17 @@ function replaceAtomic(file: string, content: string, mode: number): void {
     }
     throw err
   }
+  if (exclusive) {
+    try {
+      unlinkSync(tmp)
+    } catch {
+      /* ignore */
+    }
+  }
+  fsyncDir(dir)
 }
+
+const replaceAtomic = (file: string, content: string, mode: number): void => installManaged(file, content, mode, false)
 
 function isRegularFileNoFollow(p: string): boolean {
   try {
@@ -187,12 +237,20 @@ export function renderHostFile(input: SshHostInput): string {
   return `Host ${input.alias.trim()}\n  Hostname ${host}\n  Port ${port}\n  User ${user}\n  IdentityFile ${key}\n`
 }
 
-const CANONICAL_RE = /^Host \S+\n  Hostname \S+\n  Port \d+\n  User \S+\n  IdentityFile \S+\n?$/
+const CANONICAL_RE = /^Host (\S+)\n  Hostname \S+\n  Port \d+\n  User \S+\n  IdentityFile \S+\n?$/
 
-/** True when a managed file is exactly the five-line block this app writes (so rewriting loses nothing). */
-export function isCanonicalHostFile(text: string): boolean {
-  return CANONICAL_RE.test(text)
+/**
+ * True when a managed file is exactly the five-line block this app writes for
+ * `alias` (so rewriting loses nothing). A file whose Host line names a different
+ * alias than its filename is someone's hand-made arrangement — not canonical.
+ */
+export function isCanonicalHostFile(text: string, alias?: string): boolean {
+  const m = CANONICAL_RE.exec(text)
+  if (!m) return false
+  return alias === undefined || m[1] === alias
 }
+
+export const contentHash = (text: string): string => createHash('sha256').update(text).digest('hex')
 
 /** Name of an existing file in ~/.ssh/hosts that equals `alias` ignoring case (case-insensitive FS safety). */
 function existingCaseVariant(alias: string): string | null {
@@ -239,16 +297,24 @@ export function saveHost(input: SshHostInput): OpResult {
     } else {
       if (variant === null || !isRegularFileNoFollow(file)) return { success: false, error: `~/.ssh/hosts/${alias} does not exist.` }
       const current = readFileSync(file, 'utf8')
-      if (!isCanonicalHostFile(current) && !input.force) {
-        return {
-          success: false,
-          error: `~/.ssh/hosts/${alias} contains directives beyond the standard five lines; saving would discard them. Open the file to edit it by hand, or save with Force to overwrite.`,
-          file
+      if (!isCanonicalHostFile(current, alias)) {
+        const hash = contentHash(current)
+        if (input.force !== hash) {
+          return {
+            success: false,
+            code: 'non-canonical',
+            contentHash: hash,
+            error:
+              input.force === undefined
+                ? `~/.ssh/hosts/${alias} contains directives beyond the standard five lines; saving would discard them. Open the file to edit it by hand, or Force overwrite.`
+                : `~/.ssh/hosts/${alias} changed on disk since you saw it — reloaded; check it and force again if you still want to overwrite.`,
+            file
+          }
         }
       }
     }
 
-    writeManaged(file, renderHostFile(input), 0o600)
+    installManaged(file, renderHostFile(input), 0o600, mode === 'create')
     return { success: true, file }
   } catch (err) {
     return fail(err)

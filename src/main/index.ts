@@ -107,7 +107,7 @@ function isHostInput(v: unknown): v is SshHostInput {
     optStr(v.user) &&
     optStr(v.identityFile) &&
     (v.mode === undefined || v.mode === 'create' || v.mode === 'update') &&
-    optBool(v.force)
+    optStr(v.force)
   )
 }
 function isKeyInput(v: unknown): v is KeyCreateInput {
@@ -129,16 +129,31 @@ function isNotification(v: unknown): v is SystemNotificationOptions {
   return isObj(v) && isStr(v.title) && isStr(v.body)
 }
 
-/** Register a handler that only accepts calls from our own window and turns throws into `{success:false}`. */
-function handle<T>(channel: string, guard: (v: unknown) => boolean, fn: (arg: T) => Promise<unknown> | unknown): void {
+/**
+ * Register a handler that only accepts calls from our own window. Channels that return
+ * an OpResult turn any throw into `{success:false}`; query channels (lists, status,
+ * strings) rethrow so the renderer's `await` rejects with a message and the response
+ * shape is never silently wrong.
+ */
+function handle<T>(
+  channel: string,
+  guard: (v: unknown) => boolean,
+  fn: (arg: T) => Promise<unknown> | unknown,
+  shape: 'op' | 'query' = 'op'
+): void {
   ipcMain.handle(channel, async (event: IpcMainInvokeEvent, arg: unknown) => {
-    if (mainWindow && event.sender !== mainWindow.webContents) return { success: false, error: 'Unexpected sender.' }
-    if (!guard(arg)) return { success: false, error: `Bad payload for ${channel}.` }
+    const refuse = (message: string): never | { success: false; error: string } => {
+      if (shape === 'query') throw new Error(message)
+      return { success: false, error: message }
+    }
+    // Fail closed: no window means no legitimate caller.
+    if (!mainWindow || event.sender !== mainWindow.webContents) return refuse('Unexpected sender.')
+    if (!guard(arg)) return refuse(`Bad payload for ${channel}.`)
     try {
       return await fn(arg as T)
     } catch (err: any) {
       console.error(`[IPC] ${channel} failed:`, err)
-      return { success: false, error: err?.message || String(err) }
+      return refuse(err?.message || String(err))
     }
   })
 }
@@ -146,16 +161,16 @@ function handle<T>(channel: string, guard: (v: unknown) => boolean, fn: (arg: T)
 function registerIpcHandlers(): void {
   const none = (v: unknown): boolean => v === undefined
   // Hosts
-  handle('hosts:list', none, () => listSshHosts())
+  handle('hosts:list', none, () => listSshHosts(), 'query')
   handle<SshHostInput>('hosts:save', isHostInput, (input) => saveHost(input))
   handle<string>('hosts:delete', isStr, (alias) => deleteHost(alias))
-  handle<string>('hosts:readFile', isStr, (alias) => readHostFile(alias))
-  handle<string>('hosts:test', isStr, (alias) => testHost(alias))
-  handle('config:status', none, () => configStatus())
+  handle<string>('hosts:readFile', isStr, (alias) => readHostFile(alias), 'query')
+  handle<string>('hosts:test', isStr, (alias) => testHost(alias), 'query')
+  handle('config:status', none, () => configStatus(), 'query')
   handle('config:ensureInclude', none, () => ensureInclude())
 
   // Keys
-  handle('keys:list', none, () => listKeys())
+  handle('keys:list', none, () => listKeys(), 'query')
   handle<KeyCreateInput>('keys:create', isKeyInput, (input) => createKey(input))
   handle<string>('keys:delete', isStr, (name) => deleteKey(name))
 
@@ -180,7 +195,7 @@ function registerIpcHandlers(): void {
     else mainWindow?.maximize()
   })
   handle('window:close', none, () => mainWindow?.close())
-  handle('window:isMaximized', none, () => mainWindow?.isMaximized() ?? false)
+  handle('window:isMaximized', none, () => mainWindow?.isMaximized() ?? false, 'query')
 }
 
 if (!app.requestSingleInstanceLock()) {

@@ -1,5 +1,5 @@
 import { TerminalLaunchOptions, TerminalLaunchResult } from '@shared/ipc-types'
-import { formatSshCommand, validateSshTarget } from '@shared/ssh'
+import { formatArgv, formatSshCommand, validateSshTarget } from '@shared/ssh'
 
 const shellFlavour = (): 'posix' | 'win32' => (/Windows/i.test(navigator.userAgent) ? 'win32' : 'posix')
 
@@ -18,7 +18,12 @@ export async function launchSsh(options: TerminalLaunchOptions): Promise<Termina
   try {
     // An explicit alias is validated in the main process (it need only be one argv word).
     const invalid = options.alias !== undefined ? null : validateSshTarget(options)
-    const fallbackCommand = options.alias !== undefined ? `ssh -- ${options.alias}` : invalid ? undefined : formatSshCommand(options, shellFlavour())
+    const fallbackCommand =
+      options.alias !== undefined
+        ? formatArgv(['ssh', '--', options.alias], shellFlavour())
+        : invalid
+          ? undefined
+          : formatSshCommand(options, shellFlavour())
 
     let result: TerminalLaunchResult
     if (invalid) {

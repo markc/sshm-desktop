@@ -202,13 +202,16 @@ export function configIncludesHostsDir(configPath = sshConfigPath()): boolean {
     return false
   }
   const wanted = join(hostsDir(), '*')
-  let inMatch = false
+  // An Include only counts when it applies to every destination: before any block,
+  // or inside a `Host *`-style block with no negations. Inside `Host bastion` or a
+  // Match block it is conditional.
+  let global = true
   for (const rawLine of text.split(/\r?\n/)) {
     const tok = tokenise(rawLine)
     if (!tok) continue
-    if (tok.keyword === 'match') inMatch = true
-    else if (tok.keyword === 'host') inMatch = false
-    else if (tok.keyword === 'include' && !inMatch) {
+    if (tok.keyword === 'match') global = false
+    else if (tok.keyword === 'host') global = tok.args.includes('*') && !tok.args.some((a) => a.startsWith('!'))
+    else if (tok.keyword === 'include' && global) {
       for (const arg of tok.args) {
         let p = expandTilde(arg.replace(/^\$\{?HOME\}?/, '~'))
         if (!isAbsolute(p)) p = resolve(sshDir(), p)
@@ -244,8 +247,9 @@ function literalAliases(blocks: ConfigBlock[]): Array<{ alias: string; file: str
   for (const b of blocks) {
     for (const p of b.patterns) {
       if (!SAFE_ALIAS_RE.test(p) || p.includes('*') || p.includes('?')) continue
-      if (seen.has(p)) continue
-      seen.add(p)
+      const key = p.toLowerCase() // ssh matches case-insensitively, so `Prod` and `prod` are one alias
+      if (seen.has(key)) continue
+      seen.add(key)
       out.push({ alias: p, file: b.file })
     }
   }

@@ -68,8 +68,12 @@ export interface SshHostInput {
   identityFile?: string
   /** create (default) refuses to overwrite or shadow; update refuses a missing file. */
   mode?: 'create' | 'update'
-  /** update only: overwrite a managed file even if it has directives beyond the standard five lines. */
-  force?: boolean
+  /**
+   * update only: overwrite a managed file that has directives beyond the standard five
+   * lines. Must be the `contentHash` from the refusal, so a file that changed in between
+   * is never blindly overwritten.
+   */
+  force?: string
 }
 
 export interface HostTestResult {
@@ -122,6 +126,10 @@ export interface OpResult {
   error?: string
   /** Path written / removed, when relevant. */
   file?: string
+  /** Machine-readable reason for a refusal, when the UI can offer a way forward. */
+  code?: 'non-canonical'
+  /** With code 'non-canonical': sha256 of the file as it is now — pass back as `force` to overwrite exactly that. */
+  contentHash?: string
 }
 
 export interface SystemNotificationOptions {

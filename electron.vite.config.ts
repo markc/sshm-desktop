@@ -12,6 +12,21 @@ function removeCrossoriginPlugin() {
   }
 }
 
+// Production-only CSP: the built page is a local file with a privileged bridge and needs
+// no network at all. Not applied in dev, where Vite's HMR websocket must be allowed.
+const CSP =
+  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
+  "font-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+function cspPlugin() {
+  return {
+    name: 'sshm-csp',
+    apply: 'build' as const,
+    transformIndexHtml(html: string) {
+      return html.replace('<head>', `<head>\n    <meta http-equiv="Content-Security-Policy" content="${CSP}" />`)
+    }
+  }
+}
+
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
@@ -37,6 +52,6 @@ export default defineConfig({
         '@shared': resolve('src/shared')
       }
     },
-    plugins: [react(), removeCrossoriginPlugin()]
+    plugins: [react(), removeCrossoriginPlugin(), cspPlugin()]
   }
 })
