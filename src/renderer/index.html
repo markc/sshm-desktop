@@ -1,12 +1,16 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SSHM Desktop</title>
+    <!-- DCS pre-paint: applies the persisted theme/scheme/widths before first paint. A separate
+         file (not inline) because the production CSP is script-src 'self'. Keep its storage key
+         and topnav height identical to the <ThemeProvider> props in App.tsx. -->
+    <script src="./prepaint.js"></script>
   </head>
-  <body class="bg-[#212529] text-[#f8f9fa] antialiased select-none overflow-hidden h-screen w-screen m-0 p-0">
-    <div id="root" class="h-full w-full flex flex-col"></div>
+  <body>
+    <div id="root" class="h-full w-full"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

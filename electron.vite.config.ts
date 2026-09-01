@@ -49,6 +49,8 @@ export default defineConfig({
     base: './',
     resolve: {
       alias: {
+        // `@` mirrors laradcs so the vendored DCS files under components/dcs, contexts/ stay byte-identical.
+        '@': resolve('src/renderer/src'),
         '@renderer': resolve('src/renderer/src'),
         '@shared': resolve('src/shared')
       }

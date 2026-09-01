@@ -1,0 +1,387 @@
+/*
+ * DCS (Dual Carousel Sidebar) theme tokens.
+ *
+ * Faithful port of the dcs.spa reference implementation
+ * (https://dcs.spa/docs/base.css + site.css). Colour values match
+ * dcs.spa exactly; names are prefixed `--scheme-*` so they don't
+ * collide with the shadcn/ui tokens that resources/css/app.css owns.
+ *
+ * Do NOT use HSL or RGB in this file — OKLCH only.
+ *
+ * Schemes: Ocean (default, H=220), Crimson (H=25), Stone (H=60),
+ * Forest (H=150), Sunset (H=45), Mono (C=0).
+ */
+
+:root {
+    --topnav-height: 4rem;
+    --sidebar-header-height: 3rem;
+    --sidebar-width-left: 15%;
+    --sidebar-width-right: 15%;
+    --sw-l: clamp(200px, var(--sidebar-width-left), 100%);
+    --sw-r: clamp(200px, var(--sidebar-width-right), 100%);
+    --content-max: 75vw;
+}
+
+html.preload,
+html.preload * {
+    transition: none !important;
+}
+
+/* ---------- Ocean (default) — H=220, light ---------- */
+:root {
+    --scheme-bg-primary: oklch(98% 0.008 220);
+    --scheme-bg-secondary: oklch(96% 0.012 220);
+    --scheme-bg-tertiary: oklch(92% 0.018 220);
+    --scheme-fg-primary: oklch(25% 0.06 220);
+    --scheme-fg-secondary: oklch(40% 0.08 220);
+    --scheme-fg-muted: oklch(50% 0.06 220);
+    --scheme-accent: oklch(55% 0.12 220);
+    --scheme-accent-hover: oklch(60% 0.14 220);
+    --scheme-accent-fg: oklch(98% 0.01 220);
+    --scheme-accent-subtle: oklch(92% 0.025 220);
+    --scheme-accent-glow: oklch(55% 0.12 220 / 0.3);
+    --scheme-border: oklch(85% 0.02 220);
+    --scheme-border-muted: oklch(90% 0.015 220);
+    --glass: oklch(98% 0.008 220 / 0.9);
+    --glass-border: oklch(85% 0.02 220 / 0.5);
+}
+
+.dark {
+    --scheme-bg-primary: oklch(12% 0.015 220);
+    --scheme-bg-secondary: oklch(16% 0.02 220);
+    --scheme-bg-tertiary: oklch(22% 0.025 220);
+    --scheme-fg-primary: oklch(95% 0.02 220);
+    --scheme-fg-secondary: oklch(75% 0.05 220);
+    --scheme-fg-muted: oklch(55% 0.04 220);
+    --scheme-accent: oklch(75% 0.12 220);
+    --scheme-accent-hover: oklch(85% 0.1 220);
+    --scheme-accent-fg: oklch(15% 0.04 220);
+    --scheme-accent-subtle: oklch(25% 0.04 220);
+    --scheme-accent-glow: oklch(75% 0.12 220 / 0.4);
+    --scheme-border: oklch(30% 0.03 220);
+    --scheme-border-muted: oklch(22% 0.02 220);
+    --glass: oklch(16% 0.02 220 / 0.85);
+    --glass-border: oklch(30% 0.03 220 / 0.5);
+}
+
+/* ---------- Crimson — H=25 ---------- */
+.scheme-crimson:not(.dark) {
+    --scheme-bg-primary: oklch(98% 0.008 25);
+    --scheme-bg-secondary: oklch(96% 0.012 25);
+    --scheme-bg-tertiary: oklch(92% 0.018 25);
+    --scheme-fg-primary: oklch(25% 0.04 25);
+    --scheme-fg-secondary: oklch(40% 0.06 25);
+    --scheme-fg-muted: oklch(50% 0.04 25);
+    --scheme-accent: oklch(47% 0.2 25);
+    --scheme-accent-hover: oklch(42% 0.22 25);
+    --scheme-accent-fg: oklch(98% 0.01 25);
+    --scheme-accent-subtle: oklch(92% 0.04 25);
+    --scheme-accent-glow: oklch(47% 0.2 25 / 0.3);
+    --scheme-border: oklch(85% 0.02 25);
+    --scheme-border-muted: oklch(90% 0.015 25);
+    --glass: oklch(98% 0.008 25 / 0.9);
+    --glass-border: oklch(85% 0.02 25 / 0.5);
+}
+.dark.scheme-crimson {
+    --scheme-bg-primary: oklch(10% 0.015 25);
+    --scheme-bg-secondary: oklch(14% 0.02 25);
+    --scheme-bg-tertiary: oklch(20% 0.025 25);
+    --scheme-fg-primary: oklch(95% 0.02 25);
+    --scheme-fg-secondary: oklch(75% 0.04 25);
+    --scheme-fg-muted: oklch(55% 0.03 25);
+    --scheme-accent: oklch(54% 0.23 25);
+    --scheme-accent-hover: oklch(60% 0.25 25);
+    --scheme-accent-fg: oklch(98% 0.01 25);
+    --scheme-accent-subtle: oklch(20% 0.05 25);
+    --scheme-accent-glow: oklch(54% 0.23 25 / 0.4);
+    --scheme-border: oklch(28% 0.03 25);
+    --scheme-border-muted: oklch(20% 0.02 25);
+    --glass: oklch(14% 0.02 25 / 0.85);
+    --glass-border: oklch(28% 0.03 25 / 0.5);
+}
+
+/* ---------- Stone — H=60 ---------- */
+.scheme-stone:not(.dark) {
+    --scheme-bg-primary: oklch(98% 0.005 60);
+    --scheme-bg-secondary: oklch(96% 0.008 60);
+    --scheme-bg-tertiary: oklch(92% 0.012 60);
+    --scheme-fg-primary: oklch(25% 0.02 60);
+    --scheme-fg-secondary: oklch(45% 0.02 60);
+    --scheme-fg-muted: oklch(55% 0.015 60);
+    --scheme-accent: oklch(45% 0.05 60);
+    --scheme-accent-hover: oklch(35% 0.06 60);
+    --scheme-accent-fg: oklch(98% 0.005 60);
+    --scheme-accent-subtle: oklch(92% 0.015 60);
+    --scheme-accent-glow: oklch(45% 0.05 60 / 0.3);
+    --scheme-border: oklch(85% 0.01 60);
+    --scheme-border-muted: oklch(90% 0.008 60);
+    --glass: oklch(98% 0.005 60 / 0.9);
+    --glass-border: oklch(85% 0.01 60 / 0.5);
+}
+.dark.scheme-stone {
+    --scheme-bg-primary: oklch(12% 0.01 60);
+    --scheme-bg-secondary: oklch(16% 0.012 60);
+    --scheme-bg-tertiary: oklch(22% 0.015 60);
+    --scheme-fg-primary: oklch(95% 0.01 60);
+    --scheme-fg-secondary: oklch(75% 0.015 60);
+    --scheme-fg-muted: oklch(55% 0.015 60);
+    --scheme-accent: oklch(80% 0.03 60);
+    --scheme-accent-hover: oklch(90% 0.02 60);
+    --scheme-accent-fg: oklch(20% 0.02 60);
+    --scheme-accent-subtle: oklch(25% 0.02 60);
+    --scheme-accent-glow: oklch(80% 0.03 60 / 0.3);
+    --scheme-border: oklch(30% 0.015 60);
+    --scheme-border-muted: oklch(22% 0.012 60);
+    --glass: oklch(16% 0.012 60 / 0.85);
+    --glass-border: oklch(30% 0.015 60 / 0.5);
+}
+
+/* ---------- Forest — H=150 ---------- */
+.scheme-forest:not(.dark) {
+    --scheme-bg-primary: oklch(98% 0.008 150);
+    --scheme-bg-secondary: oklch(96% 0.012 150);
+    --scheme-bg-tertiary: oklch(92% 0.018 150);
+    --scheme-fg-primary: oklch(25% 0.06 150);
+    --scheme-fg-secondary: oklch(40% 0.08 150);
+    --scheme-fg-muted: oklch(50% 0.06 150);
+    --scheme-accent: oklch(50% 0.12 150);
+    --scheme-accent-hover: oklch(55% 0.14 150);
+    --scheme-accent-fg: oklch(98% 0.01 150);
+    --scheme-accent-subtle: oklch(92% 0.025 150);
+    --scheme-accent-glow: oklch(50% 0.12 150 / 0.3);
+    --scheme-border: oklch(85% 0.02 150);
+    --scheme-border-muted: oklch(90% 0.015 150);
+    --glass: oklch(98% 0.008 150 / 0.9);
+    --glass-border: oklch(85% 0.02 150 / 0.5);
+}
+.dark.scheme-forest {
+    --scheme-bg-primary: oklch(12% 0.015 150);
+    --scheme-bg-secondary: oklch(16% 0.02 150);
+    --scheme-bg-tertiary: oklch(22% 0.025 150);
+    --scheme-fg-primary: oklch(95% 0.02 150);
+    --scheme-fg-secondary: oklch(75% 0.05 150);
+    --scheme-fg-muted: oklch(55% 0.04 150);
+    --scheme-accent: oklch(70% 0.12 150);
+    --scheme-accent-hover: oklch(80% 0.1 150);
+    --scheme-accent-fg: oklch(15% 0.04 150);
+    --scheme-accent-subtle: oklch(25% 0.04 150);
+    --scheme-accent-glow: oklch(70% 0.12 150 / 0.3);
+    --scheme-border: oklch(30% 0.03 150);
+    --scheme-border-muted: oklch(22% 0.02 150);
+    --glass: oklch(16% 0.02 150 / 0.85);
+    --glass-border: oklch(30% 0.03 150 / 0.5);
+}
+
+/* ---------- Sunset — H=45 ---------- */
+.scheme-sunset:not(.dark) {
+    --scheme-bg-primary: oklch(98% 0.01 45);
+    --scheme-bg-secondary: oklch(96% 0.015 45);
+    --scheme-bg-tertiary: oklch(92% 0.02 45);
+    --scheme-fg-primary: oklch(30% 0.08 45);
+    --scheme-fg-secondary: oklch(42% 0.1 45);
+    --scheme-fg-muted: oklch(52% 0.08 45);
+    --scheme-accent: oklch(60% 0.16 45);
+    --scheme-accent-hover: oklch(65% 0.18 45);
+    --scheme-accent-fg: oklch(98% 0.01 45);
+    --scheme-accent-subtle: oklch(92% 0.03 45);
+    --scheme-accent-glow: oklch(60% 0.16 45 / 0.3);
+    --scheme-border: oklch(85% 0.025 45);
+    --scheme-border-muted: oklch(90% 0.02 45);
+    --glass: oklch(98% 0.01 45 / 0.9);
+    --glass-border: oklch(85% 0.025 45 / 0.5);
+}
+.dark.scheme-sunset {
+    --scheme-bg-primary: oklch(12% 0.02 45);
+    --scheme-bg-secondary: oklch(16% 0.025 45);
+    --scheme-bg-tertiary: oklch(22% 0.03 45);
+    --scheme-fg-primary: oklch(95% 0.025 45);
+    --scheme-fg-secondary: oklch(75% 0.06 45);
+    --scheme-fg-muted: oklch(55% 0.05 45);
+    --scheme-accent: oklch(72% 0.14 45);
+    --scheme-accent-hover: oklch(82% 0.12 45);
+    --scheme-accent-fg: oklch(15% 0.05 45);
+    --scheme-accent-subtle: oklch(25% 0.05 45);
+    --scheme-accent-glow: oklch(72% 0.14 45 / 0.3);
+    --scheme-border: oklch(30% 0.035 45);
+    --scheme-border-muted: oklch(22% 0.025 45);
+    --glass: oklch(16% 0.025 45 / 0.85);
+    --glass-border: oklch(30% 0.035 45 / 0.5);
+}
+
+/* ---------- Mono -- C=0 pure grayscale ---------- */
+.scheme-mono:not(.dark) {
+    --scheme-bg-primary: oklch(98% 0 0);
+    --scheme-bg-secondary: oklch(96% 0 0);
+    --scheme-bg-tertiary: oklch(92% 0 0);
+    --scheme-fg-primary: oklch(20% 0 0);
+    --scheme-fg-secondary: oklch(40% 0 0);
+    --scheme-fg-muted: oklch(50% 0 0);
+    --scheme-accent: oklch(25% 0 0);
+    --scheme-accent-hover: oklch(35% 0 0);
+    --scheme-accent-fg: oklch(98% 0 0);
+    --scheme-accent-subtle: oklch(90% 0 0);
+    --scheme-accent-glow: oklch(25% 0 0 / 0.2);
+    --scheme-border: oklch(85% 0 0);
+    --scheme-border-muted: oklch(90% 0 0);
+    --glass: oklch(98% 0 0);
+    --glass-border: oklch(85% 0 0 / 0.5);
+}
+.dark.scheme-mono {
+    --scheme-bg-primary: oklch(10% 0 0);
+    --scheme-bg-secondary: oklch(15% 0 0);
+    --scheme-bg-tertiary: oklch(22% 0 0);
+    --scheme-fg-primary: oklch(95% 0 0);
+    --scheme-fg-secondary: oklch(75% 0 0);
+    --scheme-fg-muted: oklch(61% 0 0);
+    --scheme-accent: oklch(85% 0 0);
+    --scheme-accent-hover: oklch(92% 0 0);
+    --scheme-accent-fg: oklch(12% 0 0);
+    --scheme-accent-subtle: oklch(25% 0 0);
+    --scheme-accent-glow: oklch(85% 0 0 / 0.3);
+    --scheme-border: oklch(30% 0 0);
+    --scheme-border-muted: oklch(22% 0 0);
+    --glass: oklch(15% 0 0 / 0.85);
+    --glass-border: oklch(30% 0 0 / 0.5);
+}
+
+html.narrow {
+    --content-max: 50vw;
+}
+html.wide {
+    --content-max: none;
+}
+
+@media (min-width: 960px) {
+    main > section {
+        max-width: var(--content-max);
+        margin-inline: auto;
+    }
+}
+
+.sidebar-left,
+.sidebar-right {
+    container-type: inline-size;
+}
+
+@container (max-width: 230px) {
+    .appearance-section {
+        padding: 0.5rem;
+    }
+    .toggle-group {
+        flex-direction: column;
+    }
+    .toggle-btn {
+        flex: 0 0 auto;
+        padding: 0.25rem 0.5rem;
+    }
+    .sidebar-width-controls {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .sidebar-width-control label {
+        white-space: normal;
+    }
+    .scheme-item {
+        justify-content: center;
+        padding: 0.5rem;
+    }
+    .scheme-name {
+        display: none;
+    }
+    .carousel-nav {
+        gap: 0.5rem;
+    }
+}
+
+/* ---------- Sidebar animations ---------- */
+.sidebar-slide {
+    transition:
+        translate 300ms cubic-bezier(0.33, 1, 0.68, 1),
+        margin 300ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+@keyframes page-fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.page-fade-in {
+    animation: page-fade-in 200ms ease-out;
+}
+
+/* Sidebar inner rail spans the sidebar, which already starts below the topnav. */
+.sidebar-left::after,
+.sidebar-right::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--scheme-border);
+    z-index: 1;
+    pointer-events: none;
+}
+.sidebar-left::after {
+    right: 0;
+}
+.sidebar-right::after {
+    left: 0;
+}
+/*
+ * Inner-edge resize handle — drag to set sidebar width. Rendered (by
+ * sidebar.tsx) only while the sidebar is open, so the off-canvas edge never
+ * leaks an active strip onto the viewport edge. A 10px hit area straddles the
+ * 1px ::after border; a 2px accent line shows on hover / while dragging.
+ */
+.sidebar-resizer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 10px;
+    z-index: 2;
+    cursor: ew-resize;
+    touch-action: none;
+}
+.sidebar-left .sidebar-resizer {
+    right: -5px;
+}
+.sidebar-right .sidebar-resizer {
+    left: -5px;
+}
+.sidebar-resizer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--scheme-accent);
+    opacity: 0;
+    transition: opacity 150ms ease;
+}
+.sidebar-left .sidebar-resizer::before {
+    right: 5px;
+}
+.sidebar-right .sidebar-resizer::before {
+    left: 5px;
+}
+.sidebar-resizer:hover::before,
+body.dcs-resizing .sidebar-resizer::before {
+    opacity: 1;
+}
+body.dcs-resizing {
+    cursor: ew-resize;
+    user-select: none;
+}
+body.dcs-resizing .sidebar-left,
+body.dcs-resizing .sidebar-right {
+    transition: none;
+}
+@media (max-width: 767px) {
+    .sidebar-resizer {
+        display: none;
+    }
+}

@@ -1,80 +1,91 @@
 @import 'tailwindcss';
+@import './css/dcs/tokens.css';
 
 @custom-variant dark (&:is(.dark *));
 
-@theme {
-  --color-brand: #017cb6;
-  --color-brand-hover: #016594;
-  --color-brand-light: #008fc5;
-  --color-brand-gold: #f1ca00;
-  --color-brand-gold-dark: #d8aa00;
-
-  --color-panel-sidebar: #343a40;
-  --color-panel-sidebar-hover: rgba(255, 255, 255, 0.08);
-  --color-panel-sidebar-active: #f1ca00;
-  --color-panel-sidebar-text: #f8f9fa;
-  --color-panel-subnav-light: #f1f1f1;
-  --color-panel-subnav-dark: #2b3035;
-  --color-panel-page-light: #f8f9fa;
-  --color-panel-page-dark: #212529;
-  --color-panel-surface-light: #ffffff;
-  --color-panel-surface-dark: #2b3035;
-  --color-panel-border-light: #ced4da;
-  --color-panel-border-dark: #373b3e;
-  --color-panel-muted-light: #6c757d;
-  --color-panel-muted-dark: #adb5bd;
-  --color-panel-text-light: #212529;
-  --color-panel-text-dark: #f8f9fa;
-}
+/* The vendored components/dcs/sidebar.tsx composes `${side}-0` at runtime, which Tailwind's
+   scanner cannot see; laradcs gets these classes incidentally from its shadcn components. */
+@source inline('left-0 right-0');
 
 /*
-  The default border color has changed to `currentcolor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
+ * Every colour in the app comes from the DCS scheme tokens (OKLCH, defined in the
+ * vendored css/dcs/tokens.css). These @theme entries only give them Tailwind names:
+ * bg-surface, text-fg, border-line, bg-accent/10 … Never add a hex colour here.
+ */
+@theme {
+  --breakpoint-pin: 960px;
 
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  --text-xs: clamp(0.7rem, 0.65rem + 0.25vw, 0.75rem);
+  --text-sm: clamp(0.8rem, 0.75rem + 0.25vw, 0.875rem);
+  --text-base: clamp(0.9rem, 0.85rem + 0.25vw, 1rem);
+  --text-lg: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+  --text-xl: clamp(1.1rem, 1rem + 0.5vw, 1.25rem);
+  --text-2xl: clamp(1.25rem, 1rem + 1vw, 1.5rem);
+
+  /* names the vendored DCS files use */
+  --color-background: var(--scheme-bg-primary);
+  --color-foreground: var(--scheme-fg-primary);
+
+  /* app names */
+  --color-surface: var(--scheme-bg-primary);
+  --color-surface-2: var(--scheme-bg-secondary);
+  --color-surface-3: var(--scheme-bg-tertiary);
+  --color-fg: var(--scheme-fg-primary);
+  --color-fg-2: var(--scheme-fg-secondary);
+  --color-muted: var(--scheme-fg-muted);
+  --color-accent: var(--scheme-accent);
+  --color-accent-hover: var(--scheme-accent-hover);
+  --color-accent-fg: var(--scheme-accent-fg);
+  --color-accent-subtle: var(--scheme-accent-subtle);
+  --color-line: var(--scheme-border);
+  --color-line-muted: var(--scheme-border-muted);
+
+  --color-ok: var(--status-ok);
+  --color-warn: var(--status-warn);
+  --color-danger: var(--status-danger);
+}
+
+/* Status colours: fixed hue, lightness follows the mode (dcs.spa keeps these scheme-independent). */
+:root {
+  --status-ok: oklch(55% 0.15 150);
+  --status-warn: oklch(65% 0.15 75);
+  --status-danger: oklch(55% 0.2 25);
+}
+.dark {
+  --status-ok: oklch(75% 0.15 150);
+  --status-warn: oklch(80% 0.15 75);
+  --status-danger: oklch(70% 0.19 25);
+}
+
 @layer base {
   *,
   ::after,
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: var(--color-gray-200, currentcolor);
-  }
-}
-
-@layer base {
-  :root {
-    --sidebar-bg: #343a40;
-    --sidebar-text-color: #f8f9fa;
-    --primary: #017cb6;
-    --primary-hover: #016594;
-    --gold: #f1ca00;
-    --border-color: #ced4da;
-    --bg-page: #f8f9fa;
-    --bg-surface: #ffffff;
-    --bg-subnav: #f1f1f1;
-    --text-main: #212529;
-    --text-muted: #6c757d;
+    border-color: var(--scheme-border);
   }
 
-  .dark {
-    --border-color: #373b3e;
-    --bg-page: #212529;
-    --bg-surface: #2b3035;
-    --bg-subnav: #2b3035;
-    --text-main: #f8f9fa;
-    --text-muted: #adb5bd;
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
   }
 
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    background-color: var(--bg-page);
-    color: var(--text-main);
-    overflow: hidden;
+    font-family: var(--font-sans);
+    background: var(--scheme-bg-primary);
+    color: var(--scheme-fg-primary);
+    -webkit-font-smoothing: antialiased;
   }
+}
+
+.sidebar-divider {
+  height: 1px;
+  background: var(--scheme-border);
+  margin-block: 0.5rem;
 }
 
 /* Custom scrollbars */
@@ -86,14 +97,14 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #6c757d55;
+  background: color-mix(in oklch, var(--scheme-fg-muted) 40%, transparent);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #6c757d88;
+  background: color-mix(in oklch, var(--scheme-fg-muted) 60%, transparent);
 }
 
-/* Frameless Window Draggable Region */
+/* Frameless Window Draggable Region (unused while the window keeps its native frame) */
 .titlebar-drag-region {
   -webkit-app-region: drag;
 }
