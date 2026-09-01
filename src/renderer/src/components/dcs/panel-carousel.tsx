@@ -167,11 +167,11 @@ export default function PanelCarousel({ panels, activePanel, onPanelChange, side
                     className={`flex h-[var(--topnav-height)] shrink-0 items-center border-b px-2 ${side === 'left' ? 'pl-[3.75rem]' : 'pr-[3.75rem]'}`}
                     style={{ borderColor: 'var(--scheme-border)' }}
                 >
-                    {side === 'left' && headerSlot}
+                    {side === 'right' && headerSlot}
                     <h2 className="flex-1 text-center text-sm font-bold" style={{ color: 'var(--scheme-fg-primary)' }}>
                         {displayName(panels[0].label)}
                     </h2>
-                    {side === 'right' && headerSlot}
+                    {side === 'left' && headerSlot}
                 </div>
                 <div className={`min-h-0 flex-1 overflow-y-auto ${side === 'right' ? 'overflow-x-hidden' : ''}`}>{panels[0].content}</div>
             </>
@@ -188,12 +188,14 @@ export default function PanelCarousel({ panels, activePanel, onPanelChange, side
                 }`}
                 style={{ borderColor: 'var(--scheme-border)' }}
             >
-                {side === 'left' && headerSlot}
+                {/* Carousel controls at the outer edge (after the hamburger reserve); the pin (headerSlot) at
+                    the INNER edge, the boundary with the content it reserves space from. */}
+                {side === 'right' && <div className="mr-auto">{headerSlot}</div>}
                 <div className="carousel-nav flex items-center gap-1.5">
                     <button
                         onClick={() => changePanel(activeIndex - 1, true)}
-                        className="hover:bg-background rounded p-0.5 transition-colors"
-                        style={{ color: 'var(--scheme-fg-muted)', fontSize: 22 }}
+                        className="carousel-chevron hover:bg-background rounded transition-colors"
+                        style={{ color: 'var(--scheme-fg-muted)' }}
                         aria-label="Previous panel"
                     >
                         <ChevronLeft className="h-[1em] w-[1em]" />
@@ -203,28 +205,22 @@ export default function PanelCarousel({ panels, activePanel, onPanelChange, side
                             <button
                                 key={panel.label}
                                 onClick={() => changePanel(index, false)}
-                                className="carousel-dot transition-all"
-                                style={{
-                                    width: index === activeIndex ? 24 : 9,
-                                    height: 9,
-                                    borderRadius: 5,
-                                    backgroundColor: index === activeIndex ? 'var(--scheme-accent)' : 'var(--scheme-fg-muted)',
-                                    opacity: index === activeIndex ? 1 : 0.4,
-                                }}
+                                className={`carousel-dot${index === activeIndex ? 'active' : ''}`}
                                 aria-label={panel.label}
+                                aria-current={index === activeIndex ? 'true' : undefined}
                             />
                         ))}
                     </div>
                     <button
                         onClick={() => changePanel(activeIndex + 1, true)}
-                        className="hover:bg-background rounded p-0.5 transition-colors"
-                        style={{ color: 'var(--scheme-fg-muted)', fontSize: 22 }}
+                        className="carousel-chevron hover:bg-background rounded transition-colors"
+                        style={{ color: 'var(--scheme-fg-muted)' }}
                         aria-label="Next panel"
                     >
                         <ChevronRight className="h-[1em] w-[1em]" />
                     </button>
                 </div>
-                {side === 'right' && headerSlot}
+                {side === 'left' && <div className="ml-auto">{headerSlot}</div>}
             </div>
 
             <div className="relative min-h-0 flex-1 overflow-hidden">
