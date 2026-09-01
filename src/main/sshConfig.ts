@@ -1,3 +1,4 @@
+import { createHash } from 'crypto'
 import { readdirSync, readFileSync, statSync } from 'fs'
 import { homedir } from 'os'
 import { basename, dirname, isAbsolute, join, resolve } from 'path'
@@ -126,7 +127,9 @@ function parseFile(file: string, state: ParseState, depth: number): void {
       const { keyword, args } = tok
 
       if (keyword === 'match') {
-        state.inMatch = true
+        // `Match all` is unconditional — treat its contents like top level. Any other
+        // Match expression is not evaluated, so its contents (Includes too) are skipped.
+        state.inMatch = !(args.length === 1 && args[0].toLowerCase() === 'all')
         state.current = null
         continue
       }
@@ -209,7 +212,7 @@ export function configIncludesHostsDir(configPath = sshConfigPath()): boolean {
   for (const rawLine of text.split(/\r?\n/)) {
     const tok = tokenise(rawLine)
     if (!tok) continue
-    if (tok.keyword === 'match') global = false
+    if (tok.keyword === 'match') global = tok.args.length === 1 && tok.args[0].toLowerCase() === 'all' // `Match all` is unconditional
     else if (tok.keyword === 'host') global = tok.args.includes('*') && !tok.args.some((a) => a.startsWith('!'))
     else if (tok.keyword === 'include' && global) {
       for (const arg of tok.args) {
@@ -256,18 +259,33 @@ function literalAliases(blocks: ConfigBlock[]): Array<{ alias: string; file: str
   return out
 }
 
-/** All aliases with the values ssh would use for them. */
+/**
+ * All aliases with the values ssh resolves for them from Host blocks (Match blocks
+ * are not evaluated; multiple IdentityFile lines collapse to the first).
+ */
 export function listSshHosts(blocks: ConfigBlock[] = readSshConfigBlocks()): SshHost[] {
   const managedDir = hostsDir()
-  return literalAliases(blocks).map(({ alias, file }) => ({
-    alias,
-    hostName: effective(alias, blocks, 'hostName'),
-    user: effective(alias, blocks, 'user'),
-    port: effective(alias, blocks, 'port'),
-    identityFile: effective(alias, blocks, 'identityFile'),
-    file,
-    managed: dirname(file) === managedDir && basename(file) === alias
-  }))
+  return literalAliases(blocks).map(({ alias, file }) => {
+    const managed = dirname(file) === managedDir && basename(file) === alias
+    let contentHash: string | undefined
+    if (managed) {
+      try {
+        contentHash = createHash('sha256').update(readFileSync(file)).digest('hex')
+      } catch {
+        contentHash = undefined
+      }
+    }
+    return {
+      alias,
+      hostName: effective(alias, blocks, 'hostName'),
+      user: effective(alias, blocks, 'user'),
+      port: effective(alias, blocks, 'port'),
+      identityFile: effective(alias, blocks, 'identityFile'),
+      file,
+      managed,
+      contentHash
+    }
+  })
 }
 
 /**

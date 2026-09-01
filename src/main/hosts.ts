@@ -78,33 +78,34 @@ function ensureDir(dir: string): void {
 
 /**
  * Write `content` to a brand-new, exclusively created, randomly named temp file in
- * the target's directory and return its path. Exclusive creation means no existing
- * inode — symlink, hard link or otherwise — can ever be truncated or written through.
+ * `dir`. Exclusive creation means no existing inode — symlink, hard link or
+ * otherwise — can ever be truncated or written through. The descriptor stays open so
+ * the caller can prove the installed destination is this very inode.
  */
-function writeTemp(dir: string, mode: number, content: string): string {
+function writeExclusive(path: string, mode: number, content: string): { fd: number; ino: bigint | number } {
   const O = fsConstants
-  const tmp = join(dir, `.sshm-${randomBytes(8).toString('hex')}.tmp`)
-  const fd = openSync(tmp, O.O_WRONLY | O.O_CREAT | O.O_EXCL | (O.O_NOFOLLOW ?? 0), mode)
+  const fd = openSync(path, O.O_WRONLY | O.O_CREAT | O.O_EXCL | (O.O_NOFOLLOW ?? 0), mode)
   try {
     const st = fstatSync(fd)
-    if (!st.isFile() || st.nlink !== 1) throw new UnsafePathError(`${tmp} is not a fresh regular file.`)
+    if (!st.isFile() || st.nlink !== 1) throw new UnsafePathError(`${path} is not a fresh regular file.`)
     fchmodSync(fd, mode)
     const buf = Buffer.from(content, 'utf8')
     let off = 0
     while (off < buf.length) off += writeSync(fd, buf, off, buf.length - off)
     fsyncSync(fd)
+    return { fd, ino: st.ino }
   } catch (err) {
     closeSync(fd)
     try {
-      unlinkSync(tmp)
+      unlinkSync(path)
     } catch {
       /* ignore */
     }
     throw err
   }
-  closeSync(fd)
-  return tmp
 }
+
+const tempName = (dir: string): string => join(dir, `.sshm-${randomBytes(8).toString('hex')}.tmp`)
 
 function fsyncDir(dir: string): void {
   if (process.platform === 'win32') return
@@ -120,35 +121,83 @@ function fsyncDir(dir: string): void {
   }
 }
 
+const NO_HARDLINKS = new Set(['ENOTSUP', 'EOPNOTSUPP', 'EPERM', 'EXDEV', 'EMLINK', 'ENOSYS'])
+
 /**
- * Atomically install `content` at `file`. `exclusive` (create) links the temp into
- * place — fails with EEXIST if anything appeared there since we checked — while
- * replace renames over the old entry. Neither ever opens the destination path, so
- * hard links elsewhere keep their own bytes; only the directory entry changes.
+ * Atomically install `content` at `file`. `exclusive` (create) links a temp into
+ * place — EEXIST if anything appeared there since we checked — while replace renames
+ * over the old entry. Neither ever opens the destination path, so hard links
+ * elsewhere keep their own bytes; only the directory entry changes. After install,
+ * the destination's inode must be the one we wrote, or the install is undone.
+ * Filesystems without hard links fall back to exclusive creation at the destination.
  */
 function installManaged(file: string, content: string, mode: number, exclusive: boolean): void {
   assertNoSymlinks(file)
   const dir = dirname(file)
-  const tmp = writeTemp(dir, mode, content)
-  try {
-    if (exclusive) linkSync(tmp, file)
-    else renameSync(tmp, file)
-  } catch (err) {
-    try {
-      unlinkSync(tmp)
-    } catch {
-      /* ignore */
-    }
-    throw err
-  }
+
   if (exclusive) {
+    const tmp = tempName(dir)
+    const { fd, ino } = writeExclusive(tmp, mode, content)
     try {
+      try {
+        linkSync(tmp, file)
+      } catch (err: any) {
+        if (!NO_HARDLINKS.has(err?.code)) throw err
+        // No hard links here: create the destination itself exclusively instead.
+        unlinkSync(tmp)
+        const direct = writeExclusive(file, mode, content)
+        closeSync(direct.fd)
+        fsyncDir(dir)
+        return
+      }
       unlinkSync(tmp)
-    } catch {
-      /* ignore */
+    } catch (err) {
+      try {
+        unlinkSync(tmp)
+      } catch {
+        /* ignore */
+      }
+      throw err
+    } finally {
+      closeSync(fd)
     }
+    verifyInstalled(file, ino)
+  } else {
+    const tmp = tempName(dir)
+    const { fd, ino } = writeExclusive(tmp, mode, content)
+    try {
+      renameSync(tmp, file)
+    } catch (err) {
+      try {
+        unlinkSync(tmp)
+      } catch {
+        /* ignore */
+      }
+      throw err
+    } finally {
+      closeSync(fd)
+    }
+    verifyInstalled(file, ino)
   }
   fsyncDir(dir)
+}
+
+/** The directory entry we just installed must point at the inode we wrote; otherwise undo it. */
+function verifyInstalled(file: string, ino: bigint | number): void {
+  let st
+  try {
+    st = lstatSync(file)
+  } catch {
+    throw new UnsafePathError(`${file} vanished during install.`)
+  }
+  if (!st.isFile() || st.ino !== ino) {
+    try {
+      unlinkSync(file)
+    } catch {
+      /* ignore */
+    }
+    throw new UnsafePathError(`${file} was replaced during install — removed, nothing written.`)
+  }
 }
 
 const replaceAtomic = (file: string, content: string, mode: number): void => installManaged(file, content, mode, false)
@@ -297,19 +346,28 @@ export function saveHost(input: SshHostInput): OpResult {
     } else {
       if (variant === null || !isRegularFileNoFollow(file)) return { success: false, error: `~/.ssh/hosts/${alias} does not exist.` }
       const current = readFileSync(file, 'utf8')
-      if (!isCanonicalHostFile(current, alias)) {
-        const hash = contentHash(current)
-        if (input.force !== hash) {
-          return {
-            success: false,
-            code: 'non-canonical',
-            contentHash: hash,
-            error:
-              input.force === undefined
-                ? `~/.ssh/hosts/${alias} contains directives beyond the standard five lines; saving would discard them. Open the file to edit it by hand, or Force overwrite.`
-                : `~/.ssh/hosts/${alias} changed on disk since you saw it — reloaded; check it and force again if you still want to overwrite.`,
-            file
-          }
+      const hash = contentHash(current)
+      // Compare-and-swap: a force must name exactly the content on disk now, and a plain
+      // update must still be looking at the version it loaded.
+      if (input.force !== undefined && input.force !== hash) {
+        return {
+          success: false,
+          code: 'changed',
+          contentHash: hash,
+          error: `~/.ssh/hosts/${alias} changed on disk since you saw it. Check the file and try again.`,
+          file
+        }
+      }
+      if (input.force === undefined && input.expectedHash !== undefined && input.expectedHash !== hash) {
+        return { success: false, code: 'changed', contentHash: hash, error: `~/.ssh/hosts/${alias} changed on disk since you opened it. Refresh and edit again.`, file }
+      }
+      if (input.force === undefined && !isCanonicalHostFile(current, alias)) {
+        return {
+          success: false,
+          code: 'non-canonical',
+          contentHash: hash,
+          error: `~/.ssh/hosts/${alias} contains directives beyond the standard five lines; saving would discard them. Open the file to edit it by hand, or Force overwrite.`,
+          file
         }
       }
     }
@@ -445,19 +503,53 @@ export async function createKey(input: KeyCreateInput): Promise<OpResult> {
   }
   if (existed(file) || existed(pub)) return { success: false, error: `${file} already exists.` }
 
-  const args = ['-o', '-a', '100', '-t', type, ...(type === 'rsa' ? ['-b', '4096'] : []), '-f', file, '-C', comment, '-N', '']
-  const r = await run('ssh-keygen', args, 60_000)
-  if (r.code !== 0) {
-    // Neither file existed before we ran; whatever ssh-keygen left behind is ours to remove.
-    for (const p of [file, pub]) {
+  // Generate under a name only we know, then link the finished pair into place
+  // exclusively — so a failure can only ever clean up our own files, and a key that
+  // appeared concurrently under the real name is never touched.
+  const tmp = tempName(keysDir())
+  const tmpPub = `${tmp}.pub`
+  const cleanupTemps = (): void => {
+    for (const p of [tmp, tmpPub]) {
       try {
         if (isRegularFileNoFollow(p)) unlinkSync(p)
       } catch {
         /* best effort */
       }
     }
+  }
+  const args = ['-o', '-a', '100', '-t', type, ...(type === 'rsa' ? ['-b', '4096'] : []), '-f', tmp, '-C', comment, '-N', '']
+  const r = await run('ssh-keygen', args, 60_000)
+  if (r.code !== 0 || !isRegularFileNoFollow(tmp) || !isRegularFileNoFollow(tmpPub)) {
+    cleanupTemps()
     return { success: false, error: r.timedOut ? 'ssh-keygen timed out.' : r.stderr.trim() || `ssh-keygen exited with code ${r.code}` }
   }
+  try {
+    chmodSync(tmp, 0o600)
+    linkSync(tmp, file)
+    try {
+      linkSync(tmpPub, pub)
+    } catch (err) {
+      unlinkSync(file)
+      throw err
+    }
+  } catch (err: any) {
+    cleanupTemps()
+    if (err?.code === 'EEXIST') return { success: false, error: `${file} appeared while generating — not overwritten.` }
+    if (NO_HARDLINKS.has(err?.code)) {
+      // No hard links: fall back to exclusive rename-free moves via rename (best available).
+      try {
+        renameSync(tmp, file)
+        renameSync(tmpPub, pub)
+        return { success: true, file }
+      } catch (err2) {
+        cleanupTemps()
+        return fail(err2)
+      }
+    }
+    return fail(err)
+  }
+  cleanupTemps()
+  fsyncDir(keysDir())
   return { success: true, file }
 }
 

@@ -38,10 +38,21 @@ interface Form {
   user: string
   identityFile: string
   editing: boolean
+  /** contentHash of the managed file when the form was opened — the version an update is based on. */
+  expectedHash: string | null
   /** contentHash from a "non-canonical" refusal: the exact file the user agreed to overwrite. */
   forceHash: string | null
 }
-const emptyForm: Form = { alias: '', hostName: '', port: '22', user: 'root', identityFile: '~/.ssh/keys/default', editing: false, forceHash: null }
+const emptyForm: Form = {
+  alias: '',
+  hostName: '',
+  port: '22',
+  user: 'root',
+  identityFile: '~/.ssh/keys/default',
+  editing: false,
+  expectedHash: null,
+  forceHash: null
+}
 
 /**
  * One place turns the form into the payload; preview, client-side validation and the
@@ -67,6 +78,7 @@ function toInput(form: Form): { input: SshHostInput; error: string | null } {
       user: form.user.trim() || undefined,
       identityFile: form.identityFile.trim() || undefined,
       mode: form.editing ? 'update' : 'create',
+      expectedHash: form.expectedHash ?? undefined,
       force: form.forceHash ?? undefined
     },
     error
@@ -131,6 +143,7 @@ export const HostsPage: React.FC<HostsPageProps> = ({ onOpenTerminal }) => {
       user: h.user || 'root',
       identityFile: h.identityFile || '~/.ssh/keys/default',
       editing: true,
+      expectedHash: h.contentHash ?? null,
       forceHash: null
     })
   }
@@ -152,9 +165,16 @@ export const HostsPage: React.FC<HostsPageProps> = ({ onOpenTerminal }) => {
       const r = await window.sshm.saveHost(input)
       if (!r.success) {
         setFormError(r.error || 'Save failed.')
-        // Refused because the file has extra directives (or changed since): the next submit
-        // may force-overwrite exactly the content the server just hashed — nothing else.
-        setForm({ ...form, forceHash: r.code === 'non-canonical' && r.contentHash ? r.contentHash : null })
+        if (r.code === 'non-canonical' && r.contentHash) {
+          // The next submit may force-overwrite exactly the content the server just hashed.
+          setForm({ ...form, forceHash: r.contentHash })
+        } else if (r.code === 'changed' && r.contentHash) {
+          // Someone else wrote the file: rebase the form on the new version, never force blindly.
+          setForm({ ...form, expectedHash: r.contentHash, forceHash: null })
+          await refresh()
+        } else {
+          setForm({ ...form, forceHash: null })
+        }
         return
       }
       setNotice(`${form.editing ? 'Updated' : 'Created'} ${tildify(r.file || '')}`)
@@ -240,8 +260,9 @@ export const HostsPage: React.FC<HostsPageProps> = ({ onOpenTerminal }) => {
             </span>
           </h1>
           <p className="text-xs text-[#6c757d] mt-1">
-            Every <code>Host</code> alias in <code>~/.ssh/config</code> (following <code>Include</code>), with the HostName / User / Port
-            / IdentityFile ssh resolves for it — <code>Match</code> blocks are not evaluated. Hosts created here are written to{' '}
+            The literal <code>Host</code> aliases in <code>~/.ssh/config</code> (following <code>Include</code>; patterns, negations and
+            aliases starting with <code>-</code> are skipped), with the HostName / User / Port / IdentityFile resolved from Host blocks —{' '}
+            <code>Match</code> blocks are not evaluated and only the first IdentityFile is shown. Hosts created here are written to{' '}
             <code>~/.ssh/hosts/&lt;alias&gt;</code>, exactly as <code>sshm create</code> does.
           </p>
         </div>

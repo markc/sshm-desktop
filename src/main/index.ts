@@ -107,6 +107,7 @@ function isHostInput(v: unknown): v is SshHostInput {
     optStr(v.user) &&
     optStr(v.identityFile) &&
     (v.mode === undefined || v.mode === 'create' || v.mode === 'update') &&
+    optStr(v.expectedHash) &&
     optStr(v.force)
   )
 }
@@ -178,23 +179,39 @@ function registerIpcHandlers(): void {
   handle<TerminalLaunchOptions>('terminal:launch', isLaunchOptions, (options) => launchNativeTerminal(options))
 
   // System
-  handle<SystemNotificationOptions>('system:notify', isNotification, (options) => {
-    if (Notification.isSupported()) new Notification({ title: options.title, body: options.body }).show()
-  })
-  handle<string>('shell:openExternal', isStr, async (url) => {
-    if (/^https?:\/\//i.test(url)) await shell.openExternal(url)
-  })
+  // Void-typed channels reject on failure rather than resolving with an object.
+  handle<SystemNotificationOptions>(
+    'system:notify',
+    isNotification,
+    (options) => {
+      if (Notification.isSupported()) new Notification({ title: options.title, body: options.body }).show()
+    },
+    'query'
+  )
+  handle<string>(
+    'shell:openExternal',
+    isStr,
+    async (url) => {
+      if (/^https?:\/\//i.test(url)) await shell.openExternal(url)
+    },
+    'query'
+  )
   handle<string>('shell:openPath', isStr, async (p) => {
     if (!isOpenablePath(p)) return { success: false, error: 'Only ~/.ssh/config, ~/.ssh/hosts/* and ~/.ssh/keys/* can be opened.' }
     const err = await shell.openPath(expandPath(p))
     return err ? { success: false, error: err } : { success: true }
   })
-  handle('window:minimize', none, () => mainWindow?.minimize())
-  handle('window:maximize', none, () => {
-    if (mainWindow?.isMaximized()) mainWindow.unmaximize()
-    else mainWindow?.maximize()
-  })
-  handle('window:close', none, () => mainWindow?.close())
+  handle('window:minimize', none, () => mainWindow?.minimize(), 'query')
+  handle(
+    'window:maximize',
+    none,
+    () => {
+      if (mainWindow?.isMaximized()) mainWindow.unmaximize()
+      else mainWindow?.maximize()
+    },
+    'query'
+  )
+  handle('window:close', none, () => mainWindow?.close(), 'query')
   handle('window:isMaximized', none, () => mainWindow?.isMaximized() ?? false, 'query')
 }
 

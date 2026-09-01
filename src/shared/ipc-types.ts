@@ -57,6 +57,8 @@ export interface SshHost {
   file: string
   /** True when the file is ~/.ssh/hosts/<alias> — the layout this app (and sshm) writes. */
   managed: boolean
+  /** Managed files only: sha256 of the file as read — pass as `expectedHash` when updating. */
+  contentHash?: string
 }
 
 /** What the app writes; mirrors `sshm create NAME IP [PORT] [USER] [KEYFILE]`. */
@@ -68,6 +70,8 @@ export interface SshHostInput {
   identityFile?: string
   /** create (default) refuses to overwrite or shadow; update refuses a missing file. */
   mode?: 'create' | 'update'
+  /** update only: the `contentHash` the form was loaded from; refused with code 'changed' if the file moved on. */
+  expectedHash?: string
   /**
    * update only: overwrite a managed file that has directives beyond the standard five
    * lines. Must be the `contentHash` from the refusal, so a file that changed in between
@@ -127,8 +131,8 @@ export interface OpResult {
   /** Path written / removed, when relevant. */
   file?: string
   /** Machine-readable reason for a refusal, when the UI can offer a way forward. */
-  code?: 'non-canonical'
-  /** With code 'non-canonical': sha256 of the file as it is now — pass back as `force` to overwrite exactly that. */
+  code?: 'non-canonical' | 'changed'
+  /** With a code: sha256 of the file as it is now — pass back as `force` (non-canonical) or reload from it (changed). */
   contentHash?: string
 }
 
