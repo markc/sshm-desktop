@@ -3,10 +3,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* The vendored components/dcs/sidebar.tsx composes `${side}-0` at runtime, which Tailwind's
-   scanner cannot see; laradcs gets these classes incidentally from its shadcn components. */
-@source inline('left-0 right-0');
-
 /*
  * Every colour in the app comes from the DCS scheme tokens (OKLCH, defined in the
  * vendored css/dcs/tokens.css). These @theme entries only give them Tailwind names:

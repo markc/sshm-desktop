@@ -14,7 +14,6 @@
 
 :root {
     --topnav-height: 4rem;
-    --sidebar-header-height: 3rem;
     --sidebar-width-left: 15%;
     --sidebar-width-right: 15%;
     --sw-l: clamp(200px, var(--sidebar-width-left), 100%);
@@ -313,15 +312,24 @@ html.wide {
     animation: page-fade-in 200ms ease-out;
 }
 
-/* Sidebar inner rail spans the sidebar, which already starts below the topnav. */
+/*
+ * Sidebar inner vertical rail — faithful port of dcs.spa base.css.
+ *
+ * A 1px strip down the INSIDE edge of each sidebar. On initial load it starts at
+ * `top: var(--topnav-height)`, so the top row (sidebar header · topnav · sidebar
+ * header) reads as one bar. Once the user scrolls (body.scrolled is toggled by the
+ * scroll handler in app-dual-sidebar-layout.tsx) the topnav has scrolled away and the
+ * rail's `top` animates to 0, giving a seamless full-height line.
+ */
 .sidebar-left::after,
 .sidebar-right::after {
     content: '';
     position: absolute;
-    top: 0;
+    top: var(--topnav-height);
     bottom: 0;
     width: 1px;
     background: var(--scheme-border);
+    transition: top 300ms cubic-bezier(0.33, 1, 0.68, 1);
     z-index: 1;
     pointer-events: none;
 }
@@ -330,6 +338,10 @@ html.wide {
 }
 .sidebar-right::after {
     left: 0;
+}
+body.scrolled .sidebar-left::after,
+body.scrolled .sidebar-right::after {
+    top: 0;
 }
 /*
  * Inner-edge resize handle — drag to set sidebar width. Rendered (by

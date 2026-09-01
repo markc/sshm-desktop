@@ -57,19 +57,23 @@ function Shell(): React.JSX.Element {
       <Sidebar side="left" panels={leftPanels} />
       <Sidebar side="right" panels={rightPanels} />
 
-      <TopNav>
-        <span className="flex items-center gap-2 text-base">
-          <SquareTerminal className="w-4 h-4" />
-          <span className="font-bold tracking-tight">SSHM</span>
-          <span className="font-normal text-muted">Desktop</span>
-        </span>
-      </TopNav>
-
+      {/* DCS three-column top row: the fixed sidebar headers are the outer columns; the TopNav is
+          the centre, in flow at the top of the content column, so it scrolls away with the content.
+          The window itself never scrolls (body is overflow:hidden), so this column is the scroller
+          and drives body.scrolled for the sidebar rails. */}
       <div
-        className={`sidebar-slide h-full pt-[var(--topnav-height)] flex flex-col ${left.pinned ? 'pin:ml-[var(--sw-l)]' : ''} ${right.pinned ? 'pin:mr-[var(--sw-r)]' : ''}`}
+        onScroll={(e) => document.body.classList.toggle('scrolled', e.currentTarget.scrollTop > 0)}
+        className={`sidebar-slide h-full overflow-y-auto ${left.pinned ? 'pin:ml-[var(--sw-l)]' : ''} ${right.pinned ? 'pin:mr-[var(--sw-r)]' : ''}`}
       >
+        <TopNav>
+          <span className="flex items-center gap-2 text-base">
+            <SquareTerminal className="w-4 h-4" />
+            <span className="font-bold tracking-tight">SSHM</span>
+            <span className="font-normal text-muted">Desktop</span>
+          </span>
+        </TopNav>
         {(notice || loadError || (status && !status.includePresent)) && (
-          <div className="px-4 pt-3 space-y-2 shrink-0">
+          <div className="px-4 pt-3 space-y-2">
             {loadError && <Strip tone="danger">Couldn't read your SSH config: {loadError}</Strip>}
             {status && !status.includePresent && (
               <Strip
@@ -91,7 +95,7 @@ function Shell(): React.JSX.Element {
             )}
           </div>
         )}
-        <main key={selectionKey(selection)} className="page-fade-in flex-1 min-h-0 overflow-y-auto select-text">
+        <main key={selectionKey(selection)} className="page-fade-in min-h-[calc(100%-var(--topnav-height))] select-text">
           {selection.kind === 'host' && host && <HostDetail host={host} />}
           {selection.kind === 'new-host' && <HostDetail host={null} />}
           {selection.kind === 'key' && key && <KeyDetail keyInfo={key} />}

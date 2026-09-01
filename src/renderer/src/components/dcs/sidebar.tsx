@@ -46,7 +46,7 @@ export default function Sidebar({ side, panels }: SidebarProps) {
 
     return (
         <aside
-            className={`sidebar-${side} sidebar-slide page-fade-in fixed top-[var(--topnav-height)] ${side === 'left' ? 'left-0' : 'right-0'} z-30 flex h-[calc(100vh-var(--topnav-height))] flex-col ${side === 'left' ? 'w-[var(--sw-l)]' : 'w-[var(--sw-r)]'} ${
+            className={`sidebar-${side} sidebar-slide page-fade-in fixed top-0 ${side === 'left' ? 'left-0' : 'right-0'} z-30 flex h-screen flex-col ${side === 'left' ? 'w-[var(--sw-l)]' : 'w-[var(--sw-r)]'} ${
                 state.open ? 'translate-x-0' : side === 'left' ? '-translate-x-full' : 'translate-x-full'
             }`}
             style={{

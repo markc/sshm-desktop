@@ -164,7 +164,7 @@ export default function PanelCarousel({ panels, activePanel, onPanelChange, side
         return (
             <>
                 <div
-                    className="flex h-[var(--sidebar-header-height)] shrink-0 items-center border-b px-2"
+                    className={`flex h-[var(--topnav-height)] shrink-0 items-center border-b px-2 ${side === 'left' ? 'pl-[3.75rem]' : 'pr-[3.75rem]'}`}
                     style={{ borderColor: 'var(--scheme-border)' }}
                 >
                     {side === 'left' && headerSlot}
@@ -183,8 +183,8 @@ export default function PanelCarousel({ panels, activePanel, onPanelChange, side
     return (
         <>
             <div
-                className={`carousel-header flex h-[var(--sidebar-header-height)] shrink-0 items-center gap-1 border-b px-2 ${
-                    side === 'left' ? 'justify-start' : 'justify-end'
+                className={`carousel-header flex h-[var(--topnav-height)] shrink-0 items-center gap-1 border-b px-2 ${
+                    side === 'left' ? 'justify-start pl-[3.75rem]' : 'justify-end pr-[3.75rem]'
                 }`}
                 style={{ borderColor: 'var(--scheme-border)' }}
             >

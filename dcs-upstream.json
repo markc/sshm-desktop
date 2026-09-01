@@ -1,13 +1,13 @@
 {
-  "repo": "markc/laradcs",
-  "commit": "5bb06873eddd30f8c1e5bae32340bf2dbbf32d7b",
-  "note": "laradcs is the canonical React port of DCS (dcs.spa). It was synced to dcs.spa d71aa24. Never edit the vendored files here — fix upstream, then `_bin/dcs-sync --update <sha>`.",
+  "commit": "0c286aaa1748808d0f6169520b88e456278789e5",
   "files": {
     "components/dcs/panel-carousel.tsx": "resources/js/components/dcs/panel-carousel.tsx",
+    "components/dcs/panels/theme-panel.tsx": "resources/js/components/dcs/panels/theme-panel.tsx",
     "components/dcs/sidebar.tsx": "resources/js/components/dcs/sidebar.tsx",
     "components/dcs/top-nav.tsx": "resources/js/components/dcs/top-nav.tsx",
-    "components/dcs/panels/theme-panel.tsx": "resources/js/components/dcs/panels/theme-panel.tsx",
     "contexts/theme-context.tsx": "resources/js/contexts/theme-context.tsx",
     "css/dcs/tokens.css": "resources/css/dcs/tokens.css"
-  }
+  },
+  "note": "laradcs is the canonical React port of DCS (dcs.spa). It was synced to dcs.spa 30d7508. Never edit the vendored files here — fix upstream, then `_bin/dcs-sync --update <sha>`.",
+  "repo": "markc/laradcs"
 }
