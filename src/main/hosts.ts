@@ -122,81 +122,76 @@ function fsyncDir(dir: string): void {
 }
 
 const NO_HARDLINKS = new Set(['ENOTSUP', 'EOPNOTSUPP', 'EPERM', 'EXDEV', 'EMLINK', 'ENOSYS'])
+/** Test hook: pretend link() is unsupported so the fallback branch can be exercised. */
+const hardLinksUnavailable = (): boolean => process.env.SSHM_TEST_NO_HARDLINKS === '1'
+
+/** link(), or a synthetic ENOTSUP under the test hook. */
+function tryLink(from: string, to: string): void {
+  if (hardLinksUnavailable()) {
+    const e: NodeJS.ErrnoException = new Error('link unsupported (test hook)')
+    e.code = 'ENOTSUP'
+    throw e
+  }
+  linkSync(from, to)
+}
+
+/** Remove `p` only if it is still the inode we created; never touch anything else. */
+function unlinkIfOurs(p: string, ino: bigint | number): void {
+  try {
+    const st = lstatSync(p)
+    if (st.isFile() && st.ino === ino) unlinkSync(p)
+  } catch {
+    /* gone already */
+  }
+}
 
 /**
  * Atomically install `content` at `file`. `exclusive` (create) links a temp into
  * place — EEXIST if anything appeared there since we checked — while replace renames
  * over the old entry. Neither ever opens the destination path, so hard links
- * elsewhere keep their own bytes; only the directory entry changes. After install,
- * the destination's inode must be the one we wrote, or the install is undone.
+ * elsewhere keep their own bytes; only the directory entry changes. Afterwards the
+ * destination must be the inode we wrote; if something else got there first we
+ * report it and leave that file alone — we can't prove it isn't someone's newer save.
  * Filesystems without hard links fall back to exclusive creation at the destination.
  */
 function installManaged(file: string, content: string, mode: number, exclusive: boolean): void {
   assertNoSymlinks(file)
   const dir = dirname(file)
-
-  if (exclusive) {
-    const tmp = tempName(dir)
-    const { fd, ino } = writeExclusive(tmp, mode, content)
-    try {
+  const tmp = tempName(dir)
+  const { fd, ino } = writeExclusive(tmp, mode, content)
+  let installedIno: bigint | number = ino
+  try {
+    if (exclusive) {
       try {
-        linkSync(tmp, file)
+        tryLink(tmp, file)
       } catch (err: any) {
         if (!NO_HARDLINKS.has(err?.code)) throw err
-        // No hard links here: create the destination itself exclusively instead.
-        unlinkSync(tmp)
+        // No hard links here: create the destination itself, exclusively.
         const direct = writeExclusive(file, mode, content)
         closeSync(direct.fd)
-        fsyncDir(dir)
-        return
+        installedIno = direct.ino
       }
-      unlinkSync(tmp)
-    } catch (err) {
-      try {
-        unlinkSync(tmp)
-      } catch {
-        /* ignore */
-      }
-      throw err
-    } finally {
-      closeSync(fd)
+    } else {
+      renameSync(tmp, file) // tmp no longer exists after this
     }
-    verifyInstalled(file, ino)
-  } else {
-    const tmp = tempName(dir)
-    const { fd, ino } = writeExclusive(tmp, mode, content)
-    try {
-      renameSync(tmp, file)
-    } catch (err) {
-      try {
-        unlinkSync(tmp)
-      } catch {
-        /* ignore */
-      }
-      throw err
-    } finally {
-      closeSync(fd)
-    }
-    verifyInstalled(file, ino)
+  } finally {
+    closeSync(fd)
+    unlinkIfOurs(tmp, ino)
   }
+  verifyInstalled(file, installedIno)
   fsyncDir(dir)
 }
 
-/** The directory entry we just installed must point at the inode we wrote; otherwise undo it. */
+/** The directory entry we just installed must point at the inode we wrote. Never deletes on mismatch. */
 function verifyInstalled(file: string, ino: bigint | number): void {
   let st
   try {
     st = lstatSync(file)
   } catch {
-    throw new UnsafePathError(`${file} vanished during install.`)
+    throw new UnsafePathError(`${file} vanished during install — nothing written.`)
   }
   if (!st.isFile() || st.ino !== ino) {
-    try {
-      unlinkSync(file)
-    } catch {
-      /* ignore */
-    }
-    throw new UnsafePathError(`${file} was replaced during install — removed, nothing written.`)
+    throw new UnsafePathError(`${file} was replaced by another writer during install; left untouched — check it and retry.`)
   }
 }
 
@@ -358,8 +353,13 @@ export function saveHost(input: SshHostInput): OpResult {
           file
         }
       }
-      if (input.force === undefined && input.expectedHash !== undefined && input.expectedHash !== hash) {
-        return { success: false, code: 'changed', contentHash: hash, error: `~/.ssh/hosts/${alias} changed on disk since you opened it. Refresh and edit again.`, file }
+      if (input.force === undefined) {
+        if (input.expectedHash === undefined || !/^[0-9a-f]{64}$/.test(input.expectedHash)) {
+          return { success: false, error: 'An update must say which version of the file it is based on (expectedHash).', file }
+        }
+        if (input.expectedHash !== hash) {
+          return { success: false, code: 'changed', contentHash: hash, error: `~/.ssh/hosts/${alias} changed on disk since you opened it — reloaded.`, file }
+        }
       }
       if (input.force === undefined && !isCanonicalHostFile(current, alias)) {
         return {
@@ -523,29 +523,32 @@ export async function createKey(input: KeyCreateInput): Promise<OpResult> {
     cleanupTemps()
     return { success: false, error: r.timedOut ? 'ssh-keygen timed out.' : r.stderr.trim() || `ssh-keygen exited with code ${r.code}` }
   }
+  // Install the pair exclusively: link when the filesystem allows, else exclusive
+  // creation with the temp's bytes. A conflict on either file rolls back only the
+  // inode we ourselves installed; the competing files are never touched.
+  const installOne = (from: string, to: string): bigint | number => {
+    try {
+      tryLink(from, to)
+      return lstatSync(from).ino
+    } catch (err: any) {
+      if (!NO_HARDLINKS.has(err?.code)) throw err
+      const direct = writeExclusive(to, 0o600, readFileSync(from, 'utf8'))
+      closeSync(direct.fd)
+      return direct.ino
+    }
+  }
   try {
     chmodSync(tmp, 0o600)
-    linkSync(tmp, file)
+    const privIno = installOne(tmp, file)
     try {
-      linkSync(tmpPub, pub)
+      installOne(tmpPub, pub)
     } catch (err) {
-      unlinkSync(file)
+      unlinkIfOurs(file, privIno)
       throw err
     }
   } catch (err: any) {
     cleanupTemps()
     if (err?.code === 'EEXIST') return { success: false, error: `${file} appeared while generating — not overwritten.` }
-    if (NO_HARDLINKS.has(err?.code)) {
-      // No hard links: fall back to exclusive rename-free moves via rename (best available).
-      try {
-        renameSync(tmp, file)
-        renameSync(tmpPub, pub)
-        return { success: true, file }
-      } catch (err2) {
-        cleanupTemps()
-        return fail(err2)
-      }
-    }
     return fail(err)
   }
   cleanupTemps()

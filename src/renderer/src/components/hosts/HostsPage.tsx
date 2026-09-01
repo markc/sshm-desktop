@@ -168,10 +168,27 @@ export const HostsPage: React.FC<HostsPageProps> = ({ onOpenTerminal }) => {
         if (r.code === 'non-canonical' && r.contentHash) {
           // The next submit may force-overwrite exactly the content the server just hashed.
           setForm({ ...form, forceHash: r.contentHash })
-        } else if (r.code === 'changed' && r.contentHash) {
-          // Someone else wrote the file: rebase the form on the new version, never force blindly.
-          setForm({ ...form, expectedHash: r.contentHash, forceHash: null })
+        } else if (r.code === 'changed') {
+          // Someone else wrote the file: reload the form from the new version so the user
+          // sees (and edits) what is there now — never just re-point the stale fields at it.
           await refresh()
+          const fresh = (await window.sshm.listHosts()).find((h) => h.alias === form.alias)
+          if (fresh) {
+            setForm({
+              alias: fresh.alias,
+              hostName: fresh.hostName || '',
+              port: String(fresh.port ?? 22),
+              user: fresh.user || 'root',
+              identityFile: fresh.identityFile || '~/.ssh/keys/default',
+              editing: true,
+              expectedHash: fresh.contentHash ?? null,
+              forceHash: null
+            })
+            setFormError(`${r.error} The form now shows the current file; re-apply your change.`)
+          } else {
+            setForm(null)
+            setNotice(`~/.ssh/hosts/${form.alias} is gone — nothing saved.`)
+          }
         } else {
           setForm({ ...form, forceHash: null })
         }
@@ -262,7 +279,7 @@ export const HostsPage: React.FC<HostsPageProps> = ({ onOpenTerminal }) => {
           <p className="text-xs text-[#6c757d] mt-1">
             The literal <code>Host</code> aliases in <code>~/.ssh/config</code> (following <code>Include</code>; patterns, negations and
             aliases starting with <code>-</code> are skipped), with the HostName / User / Port / IdentityFile resolved from Host blocks —{' '}
-            <code>Match</code> blocks are not evaluated and only the first IdentityFile is shown. Hosts created here are written to{' '}
+            conditional <code>Match</code> blocks are not evaluated and only the first IdentityFile is shown. Hosts created here are written to{' '}
             <code>~/.ssh/hosts/&lt;alias&gt;</code>, exactly as <code>sshm create</code> does.
           </p>
         </div>

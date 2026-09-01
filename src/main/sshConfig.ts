@@ -35,6 +35,8 @@ interface ParseState {
   current: ConfigBlock | null
   inMatch: boolean
   stack: string[] // files currently being parsed, for cycle detection
+  /** sha256 of each file's text exactly as parsed — so values and hash describe one snapshot. */
+  hashes: Map<string, string>
 }
 
 const MAX_INCLUDE_DEPTH = 8
@@ -113,12 +115,14 @@ function tokenise(rawLine: string): { keyword: string; args: string[] } | null {
 
 function parseFile(file: string, state: ParseState, depth: number): void {
   if (depth > MAX_INCLUDE_DEPTH || state.stack.includes(file)) return
-  let text: string
+  let raw: Buffer
   try {
-    text = readFileSync(file, 'utf8')
+    raw = readFileSync(file)
   } catch {
     return
   }
+  const text = raw.toString('utf8')
+  state.hashes.set(file, createHash('sha256').update(raw).digest('hex'))
   state.stack.push(file)
   try {
     for (const rawLine of text.split(/\r?\n/)) {
@@ -168,11 +172,22 @@ function parseFile(file: string, state: ParseState, depth: number): void {
   }
 }
 
-/** Parse the user's ssh config (default ~/.ssh/config) into ordered blocks. */
-export function readSshConfigBlocks(configPath = sshConfigPath()): ConfigBlock[] {
-  const state: ParseState = { blocks: [], current: null, inMatch: false, stack: [] }
+export interface ParsedConfig {
+  blocks: ConfigBlock[]
+  /** sha256 per source file, from the exact bytes the blocks were parsed from. */
+  hashes: Map<string, string>
+}
+
+/** Parse the user's ssh config (default ~/.ssh/config) into ordered blocks plus per-file hashes. */
+export function parseSshConfig(configPath = sshConfigPath()): ParsedConfig {
+  const state: ParseState = { blocks: [], current: null, inMatch: false, stack: [], hashes: new Map() }
   parseFile(configPath, state, 0)
-  return state.blocks
+  return { blocks: state.blocks, hashes: state.hashes }
+}
+
+/** Blocks only (fixtures and alias lookup). */
+export function readSshConfigBlocks(configPath = sshConfigPath()): ConfigBlock[] {
+  return parseSshConfig(configPath).blocks
 }
 
 /**
@@ -263,18 +278,12 @@ function literalAliases(blocks: ConfigBlock[]): Array<{ alias: string; file: str
  * All aliases with the values ssh resolves for them from Host blocks (Match blocks
  * are not evaluated; multiple IdentityFile lines collapse to the first).
  */
-export function listSshHosts(blocks: ConfigBlock[] = readSshConfigBlocks()): SshHost[] {
+export function listSshHosts(parsed: ParsedConfig = parseSshConfig()): SshHost[] {
+  const { blocks, hashes } = parsed
   const managedDir = hostsDir()
   return literalAliases(blocks).map(({ alias, file }) => {
     const managed = dirname(file) === managedDir && basename(file) === alias
-    let contentHash: string | undefined
-    if (managed) {
-      try {
-        contentHash = createHash('sha256').update(readFileSync(file)).digest('hex')
-      } catch {
-        contentHash = undefined
-      }
-    }
+    const contentHash = managed ? hashes.get(file) : undefined
     return {
       alias,
       hostName: effective(alias, blocks, 'hostName'),
