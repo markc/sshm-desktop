@@ -37,8 +37,13 @@ interface ParseState {
 }
 
 const MAX_INCLUDE_DEPTH = 8
-/** What we accept as an alias we might pass to ssh: never starts with `-`, no shell noise. */
-export const SAFE_ALIAS_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/
+/**
+ * A literal alias we can list and pass to ssh as one argv word (after `--`):
+ * anything ssh itself accepts except glob/negation patterns, whitespace, a
+ * leading `-`, and control characters. Shell safety is handled at argv/quoting
+ * time, not here — `db+prod` is a perfectly good alias.
+ */
+export const SAFE_ALIAS_RE = /^[^-\s*?!\x00-\x1f\x7f][^\s*?!\x00-\x1f\x7f]*$/
 
 export const sshDir = (): string => join(homedir(), '.ssh')
 export const sshConfigPath = (): string => join(sshDir(), 'config')
@@ -167,17 +172,51 @@ export function readSshConfigBlocks(configPath = sshConfigPath()): ConfigBlock[]
   return state.blocks
 }
 
-/** Does a Host block apply to `alias`? Any positive pattern matches and no negated one does. */
+/**
+ * Does a Host block apply to `alias`? Any positive pattern matches and no negated
+ * one does. ssh lowercases the destination before matching, so this is
+ * case-insensitive.
+ */
 function blockMatches(block: ConfigBlock, alias: string): boolean {
   let positive = false
   for (const p of block.patterns) {
     if (p.startsWith('!')) {
-      if (globToRegExp(p.slice(1), false).test(alias)) return false
-    } else if (globToRegExp(p, false).test(alias)) {
+      if (globToRegExp(p.slice(1), true).test(alias)) return false
+    } else if (globToRegExp(p, true).test(alias)) {
       positive = true
     }
   }
   return positive
+}
+
+/**
+ * Does ~/.ssh/config pull in ~/.ssh/hosts/* unconditionally? Reads the top-level
+ * file only (an Include inside a Match block doesn't count), accepting any of
+ * the spellings ssh accepts for that path.
+ */
+export function configIncludesHostsDir(configPath = sshConfigPath()): boolean {
+  let text: string
+  try {
+    text = readFileSync(configPath, 'utf8')
+  } catch {
+    return false
+  }
+  const wanted = join(hostsDir(), '*')
+  let inMatch = false
+  for (const rawLine of text.split(/\r?\n/)) {
+    const tok = tokenise(rawLine)
+    if (!tok) continue
+    if (tok.keyword === 'match') inMatch = true
+    else if (tok.keyword === 'host') inMatch = false
+    else if (tok.keyword === 'include' && !inMatch) {
+      for (const arg of tok.args) {
+        let p = expandTilde(arg.replace(/^\$\{?HOME\}?/, '~'))
+        if (!isAbsolute(p)) p = resolve(sshDir(), p)
+        if (p === wanted) return true
+      }
+    }
+  }
+  return false
 }
 
 /** First value of `key` among blocks that apply to `alias`, as ssh resolves it. */

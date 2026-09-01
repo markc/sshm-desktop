@@ -9,7 +9,14 @@
 // ---------------------------------------------------------------------------
 
 export interface TerminalLaunchOptions {
+  /** Destination: a hostname/IP, or (when `alias` is set) ignored in favour of the alias. */
   host: string
+  /**
+   * Launch this ~/.ssh/config alias verbatim — `ssh -- <alias>` — so its User / Port /
+   * IdentityFile apply. No host validation or alias lookup happens; the alias only has
+   * to be a single argv word. Set by the Hosts page.
+   */
+  alias?: string
   username?: string
   port?: number
   privateKeyPath?: string
@@ -59,6 +66,10 @@ export interface SshHostInput {
   port?: number
   user?: string
   identityFile?: string
+  /** create (default) refuses to overwrite or shadow; update refuses a missing file. */
+  mode?: 'create' | 'update'
+  /** update only: overwrite a managed file even if it has directives beyond the standard five lines. */
+  force?: boolean
 }
 
 export interface HostTestResult {
@@ -143,7 +154,8 @@ export interface SshmApi {
   // System
   sendNotification: (options: SystemNotificationOptions) => Promise<void>
   openExternal: (url: string) => Promise<void>
-  openPath: (path: string) => Promise<void>
+  /** Only ~/.ssh/config, ~/.ssh/hosts/* and ~/.ssh/keys/* are allowed. */
+  openPath: (path: string) => Promise<OpResult>
   minimizeWindow: () => Promise<void>
   maximizeWindow: () => Promise<void>
   closeWindow: () => Promise<void>

@@ -16,8 +16,9 @@ export async function launchSsh(options: TerminalLaunchOptions): Promise<Termina
   if (inFlight) return { success: false, error: 'A terminal launch is already in progress.' }
   inFlight = true
   try {
-    const invalid = validateSshTarget(options)
-    const fallbackCommand = invalid ? undefined : formatSshCommand(options, shellFlavour())
+    // An explicit alias is validated in the main process (it need only be one argv word).
+    const invalid = options.alias !== undefined ? null : validateSshTarget(options)
+    const fallbackCommand = options.alias !== undefined ? `ssh -- ${options.alias}` : invalid ? undefined : formatSshCommand(options, shellFlavour())
 
     let result: TerminalLaunchResult
     if (invalid) {
@@ -37,9 +38,9 @@ export async function launchSsh(options: TerminalLaunchOptions): Promise<Termina
   }
 }
 
-/** Launch a configured alias directly — no user/port/key, the config supplies them. */
+/** Launch a configured alias verbatim (`ssh -- <alias>`) — the config supplies user/port/key. */
 export function launchAlias(alias: string): Promise<TerminalLaunchResult> {
-  return launchSsh({ host: alias })
+  return launchSsh({ host: alias, alias })
 }
 
 async function reportFailure(host: string, result: TerminalLaunchResult): Promise<void> {
@@ -53,7 +54,7 @@ async function reportFailure(host: string, result: TerminalLaunchResult): Promis
       // clipboard may be unavailable; the alert still shows the command
     }
   }
-  const lines = [`Couldn't open a terminal for ${host}.`, '', result.error || 'Unknown error']
+  const lines = [`Couldn't open a terminal for ${result.alias ?? host}.`, '', result.error || 'Unknown error']
   if (command) lines.push('', copied ? 'The SSH command has been copied to your clipboard:' : 'Run this yourself:', command)
   alert(lines.join('\n'))
 }

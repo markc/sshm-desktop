@@ -38,9 +38,13 @@ export const KeysPage: React.FC = () => {
     setTimeout(() => setCopied(null), 1500)
   }
 
+  const closeForm = (): void => {
+    if (!creating) setForm(null)
+  }
+
   const submit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
-    if (!form) return
+    if (!form || creating) return
     setCreating(true)
     setFormError(null)
     try {
@@ -52,6 +56,8 @@ export const KeysPage: React.FC = () => {
       setNotice(`Created ${r.file} and ${r.file}.pub`)
       setForm(null)
       await refresh()
+    } catch (err: any) {
+      setFormError(err?.message || String(err))
     } finally {
       setCreating(false)
     }
@@ -59,13 +65,17 @@ export const KeysPage: React.FC = () => {
 
   const remove = async (k: LocalSshKey): Promise<void> => {
     if (!confirm(`Delete key "${k.name}"?\n\n${k.privateKeyPath}\n${k.publicKeyPath}\n\nAny host still using it will stop authenticating. This cannot be undone.`)) return
-    const r = await window.sshm.deleteKey(k.name)
-    if (!r.success) {
-      alert(r.error)
-      return
+    try {
+      const r = await window.sshm.deleteKey(k.name)
+      if (!r.success) {
+        alert(r.error)
+        return
+      }
+      setNotice(`Deleted ${r.file}`)
+      await refresh()
+    } catch (err: any) {
+      alert(err?.message || String(err))
     }
-    setNotice(`Deleted ${r.file}`)
-    await refresh()
   }
 
   return (
@@ -153,11 +163,11 @@ export const KeysPage: React.FC = () => {
       </div>
 
       {form && (
-        <div className="fixed inset-0 z-40 bg-black/50 flex items-center justify-center p-4" onClick={() => !creating && setForm(null)}>
+        <div className="fixed inset-0 z-40 bg-black/50 flex items-center justify-center p-4" onClick={closeForm}>
           <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-white dark:bg-[#2b3035] rounded-lg border border-[#ced4da] dark:border-[#373b3e] shadow-2xl overflow-hidden">
             <div className="px-4 py-3 bg-[#f1f1f1] dark:bg-[#262a2e] border-b border-[#ced4da] dark:border-[#373b3e] flex items-center justify-between">
               <h3 className="font-semibold text-sm">New key in ~/.ssh/keys/</h3>
-              <button type="button" onClick={() => setForm(null)} className="text-[#6c757d] hover:text-rose-500" aria-label="Close"><X className="w-4 h-4" /></button>
+              <button type="button" onClick={closeForm} disabled={creating} className="text-[#6c757d] hover:text-rose-500 disabled:opacity-40" aria-label="Close"><X className="w-4 h-4" /></button>
             </div>
             <div className="p-4 space-y-3 text-sm">
               <label className="block">
@@ -181,7 +191,7 @@ export const KeysPage: React.FC = () => {
               )}
             </div>
             <div className="px-4 py-3 bg-[#f1f1f1] dark:bg-[#262a2e] border-t border-[#ced4da] dark:border-[#373b3e] flex justify-end gap-2">
-              <button type="button" onClick={() => setForm(null)} className={subtleBtn} disabled={creating}>Cancel</button>
+              <button type="button" onClick={closeForm} className={subtleBtn} disabled={creating}>Cancel</button>
               <button type="submit" className={primaryBtn} disabled={creating}>{creating && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Generate</button>
             </div>
           </form>

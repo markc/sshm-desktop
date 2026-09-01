@@ -3,7 +3,7 @@ import { accessSync, constants } from 'fs'
 import { basename, delimiter, extname, isAbsolute, join } from 'path'
 import { TerminalLaunchOptions, TerminalLaunchResult } from '../shared/ipc-types'
 import { formatArgv, psQuote, shQuote, sshArgv, validateSshTarget } from '../shared/ssh'
-import { findSshAlias } from './sshConfig'
+import { SAFE_ALIAS_RE, findSshAlias } from './sshConfig'
 
 // ---------------------------------------------------------------------------
 // PATH lookup
@@ -146,7 +146,7 @@ function aliasArgv(alias: string, options: TerminalLaunchOptions): string[] {
     if (options.port) argv.push('-p', String(options.port))
     if (options.privateKeyPath) argv.push('-i', options.privateKeyPath)
   }
-  argv.push(alias)
+  argv.push('--', alias) // `--`: an alias can never be parsed as an option
   return argv
 }
 
@@ -155,16 +155,21 @@ function aliasArgv(alias: string, options: TerminalLaunchOptions): string[] {
 // ---------------------------------------------------------------------------
 
 export async function launchNativeTerminal(options: TerminalLaunchOptions): Promise<TerminalLaunchResult> {
-  const invalid = validateSshTarget(options)
-  if (invalid) return { success: false, error: invalid }
-
-  // Prefer an alias the user already has in ~/.ssh/config for this server: `ssh <alias>`
-  // lets their own IdentityFile / Port / User apply instead of our root@<ip> guess.
   let alias: string | null = null
-  try {
-    alias = findSshAlias({ host: options.host, serverName: options.serverName })
-  } catch (err) {
-    console.warn('[Terminal] Could not read ~/.ssh/config:', err)
+  if (options.alias !== undefined) {
+    // Explicit alias launch (Hosts page): the alias is the destination, verbatim.
+    if (!SAFE_ALIAS_RE.test(options.alias)) return { success: false, error: `"${options.alias}" is not a usable alias.` }
+    alias = options.alias
+  } else {
+    const invalid = validateSshTarget(options)
+    if (invalid) return { success: false, error: invalid }
+    // Prefer an alias the user already has in ~/.ssh/config for this address: `ssh <alias>`
+    // lets their own IdentityFile / Port / User apply instead of our root@<ip> guess.
+    try {
+      alias = findSshAlias({ host: options.host, serverName: options.serverName })
+    } catch (err) {
+      console.warn('[Terminal] Could not read ~/.ssh/config:', err)
+    }
   }
   const flavour = process.platform === 'win32' ? 'win32' : 'posix'
   const argv = alias ? aliasArgv(alias, options) : sshArgv(options)
